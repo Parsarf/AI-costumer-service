@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: shopify-support-db
+    environment:
+      POSTGRES_DB: shopify_support_bot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shopify-support-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/shopify_support_bot
+      NODE_ENV: development
+      PORT: 3001
+      APP_URL: http://localhost:3001
+      WIDGET_URL: http://localhost:3000
+      # Add your API keys here or use .env file
+      SHOPIFY_API_KEY: ${SHOPIFY_API_KEY}
+      SHOPIFY_API_SECRET: ${SHOPIFY_API_SECRET}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      SHOPIFY_SCOPES: read_orders,read_products,read_customers,write_script_tags
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Chat Widget (Development)
+  widget:
+    build:
+      context: ./chat-widget
+      dockerfile: Dockerfile
+    container_name: shopify-support-widget
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./chat-widget:/app
+      - /app/node_modules
+    command: npm start
+
+  # Redis (Optional - for session storage/caching)
+  redis:
+    image: redis:7-alpine
+    container_name: shopify-support-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: shopify-support-network
+

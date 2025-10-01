@@ -1,0 +1,261 @@
+const Store = require('../models/Store');
+const { getOrCreateConversation, saveMessage, getConversationHistory } = require('../services/conversationService');
+const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/claudeService');
+const { fetchOrderInfo, fetchProductInfo } = require('../services/shopifyService');
+const { checkEscalation, analyzeEscalationNeed, notifyEscalation, getEscalationMessage } = require('../services/escalationService');
+const { extractOrderNumber, extractProductQuery, detectIntent } = require('../utils/orderParser');
+const { buildGreetingMessage } = require('../utils/promptBuilder');
+const logger = require('../utils/logger');
+
+/**
+ * Handle chat message
+ * POST /api/chat
+ */
+async function handleChatMessage(req, res) {
+  const startTime = Date.now();
+  
+  try {
+    const { message, conversationId, shop, customerEmail, customerName } = req.body;
+
+    // Validation
+    if (!message || !shop) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    logger.info('Processing chat message', { shop, conversationId, messageLength: message.length });
+
+    // Find store
+    const store = await Store.findOne({ where: { shop, active: true } });
+    
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    // Check if store can send messages (subscription limits)
+    if (!store.canSendMessage()) {
+      return res.status(403).json({ 
+        error: 'Conversation limit reached',
+        message: 'Your conversation limit has been reached. Please upgrade your plan.'
+      });
+    }
+
+    // Get or create conversation
+    const conversation = await getOrCreateConversation(
+      conversationId,
+      store.id,
+      { email: customerEmail, name: customerName }
+    );
+
+    // Save user message
+    await saveMessage(conversation.id, 'user', message);
+
+    // Detect intent and extract entities
+    const intent = detectIntent(message);
+    const orderNumber = extractOrderNumber(message);
+    const productQuery = extractProductQuery(message);
+
+    logger.info('Message analysis', { intent, orderNumber, productQuery });
+
+    // Fetch relevant data
+    let orderData = null;
+    let productData = null;
+
+    if (orderNumber) {
+      orderData = await fetchOrderInfo(store.shop, store.accessToken, orderNumber);
+      if (orderData) {
+        logger.info('Order found', { orderNumber, orderId: orderData.id });
+        // Save order number to conversation metadata
+        conversation.metadata = {
+          ...conversation.metadata,
+          orderNumber,
+          orderId: orderData.id
+        };
+        await conversation.save();
+      }
+    }
+
+    if (productQuery) {
+      productData = await fetchProductInfo(store.shop, store.accessToken, productQuery);
+      logger.info('Products found', { count: productData?.length || 0 });
+    }
+
+    // Build system prompt with context
+    const systemPrompt = buildSystemPrompt(
+      {
+        storeName: store.storeName,
+        ...store.settings
+      },
+      orderData,
+      productData
+    );
+
+    // Get conversation history
+    const history = await getConversationHistory(conversation.id);
+
+    // Format messages for Claude
+    const claudeMessages = formatMessages([
+      ...history,
+      { role: 'user', content: message }
+    ]);
+
+    // Get response from Claude
+    const claudeResponse = await sendMessage(claudeMessages, systemPrompt);
+
+    // Check for escalation triggers
+    const needsEscalation = checkEscalation(message, claudeResponse.content);
+    const escalationAnalysis = analyzeEscalationNeed(conversation, message);
+
+    let finalResponse = claudeResponse.content;
+    let escalated = false;
+
+    if (needsEscalation || escalationAnalysis.shouldEscalate) {
+      escalated = true;
+      const reason = escalationAnalysis.reasons.join('; ') || 'User request or sensitive topic';
+      
+      await conversation.escalate(reason);
+      
+      // Notify support team (async)
+      notifyEscalation(conversation, store, reason).catch(err =>
+        logger.error('Failed to send escalation notification:', err)
+      );
+
+      // Add escalation message
+      finalResponse += '\n\n' + getEscalationMessage(store.storeName, conversation.customerEmail);
+      
+      logger.info('Conversation escalated', { 
+        conversationId: conversation.id, 
+        reason 
+      });
+    }
+
+    // Save assistant message
+    await saveMessage(conversation.id, 'assistant', finalResponse, {
+      tokens: claudeResponse.usage.output_tokens,
+      responseTime: claudeResponse.responseTime,
+      model: claudeResponse.model,
+      orderData: orderData ? { orderNumber: orderData.name } : null,
+      escalated
+    });
+
+    // Increment conversation count if this is a new conversation
+    if (!conversationId || conversation.messageCount <= 2) {
+      await store.incrementConversationCount();
+    }
+
+    const totalTime = Date.now() - startTime;
+
+    logger.info('Chat response sent', {
+      conversationId: conversation.id,
+      responseTime: totalTime,
+      escalated
+    });
+
+    // Send response
+    res.json({
+      reply: finalResponse,
+      conversationId: conversation.id,
+      needsEscalation: escalated,
+      metadata: {
+        orderData: orderData ? {
+          orderNumber: orderData.name,
+          status: orderData.fulfillment_status || 'Processing',
+          total: orderData.total_price
+        } : null,
+        intent,
+        responseTime: totalTime
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error handling chat message:', error);
+    
+    res.status(500).json({
+      error: 'Failed to process message',
+      reply: "I'm sorry, I'm having trouble processing your message right now. Please try again in a moment, or contact our support team directly."
+    });
+  }
+}
+
+/**
+ * Get conversation by ID
+ * GET /api/chat/conversation/:conversationId
+ */
+async function getConversation(req, res) {
+  try {
+    const { conversationId } = req.params;
+    const { shop } = req.query;
+
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing shop parameter' });
+    }
+
+    const store = await Store.findOne({ where: { shop } });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const conversationService = require('../services/conversationService');
+    const conversation = await conversationService.getConversation(conversationId, true);
+
+    if (!conversation || conversation.shopId !== store.id) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    res.json({
+      id: conversation.id,
+      status: conversation.status,
+      escalated: conversation.escalated,
+      customerEmail: conversation.customerEmail,
+      messages: conversation.messages,
+      createdAt: conversation.createdAt
+    });
+
+  } catch (error) {
+    logger.error('Error getting conversation:', error);
+    res.status(500).json({ error: 'Failed to get conversation' });
+  }
+}
+
+/**
+ * Get welcome message
+ * GET /api/chat/welcome?shop=example.myshopify.com
+ */
+async function getWelcomeMessage(req, res) {
+  try {
+    const { shop, customerName } = req.query;
+
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing shop parameter' });
+    }
+
+    const store = await Store.findOne({ where: { shop, active: true } });
+    
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const welcomeMsg = buildGreetingMessage(
+      {
+        storeName: store.storeName,
+        ...store.settings
+      },
+      customerName
+    );
+
+    res.json({ 
+      message: welcomeMsg,
+      theme: store.settings.theme || {}
+    });
+
+  } catch (error) {
+    logger.error('Error getting welcome message:', error);
+    res.status(500).json({ error: 'Failed to get welcome message' });
+  }
+}
+
+module.exports = {
+  handleChatMessage,
+  getConversation,
+  getWelcomeMessage
+};
+

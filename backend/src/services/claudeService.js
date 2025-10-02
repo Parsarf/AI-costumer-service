@@ -2,7 +2,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const logger = require('../utils/logger');
 
 const anthropic = new Anthropic({
-  apiKey: process.env.CLAUDE_API_KEY
+  apiKey: process.env.ANTHROPIC_API_KEY
 });
 
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
@@ -47,7 +47,7 @@ ESCALATION TRIGGERS:
 - Complex technical issues you cannot resolve
 - Customer is clearly frustrated after 2-3 exchanges
 
-When you need to escalate, respond with: "I understand this requires special attention. Let me connect you with our support team who can better assist you. They'll reach out to you at [email] within 24 hours."`;
+When you need to escalate, respond with: "I understand this requires special attention from our team. Let me connect you with our support team who can better assist you. They'll reach out to you at [email] within 24 hours."`;
 
   if (orderData) {
     prompt += `\n\nCURRENT ORDER INFORMATION:
@@ -142,33 +142,8 @@ function formatMessages(messageHistory) {
   }));
 }
 
-/**
- * Stream response from Claude (for future implementation)
- */
-async function* streamMessage(messages, systemPrompt) {
-  try {
-    const stream = await anthropic.messages.stream({
-      model: CLAUDE_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: systemPrompt,
-      messages: messages
-    });
-
-    for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-        yield chunk.delta.text;
-      }
-    }
-  } catch (error) {
-    logger.error('Claude streaming error:', error);
-    throw error;
-  }
-}
-
 module.exports = {
   buildSystemPrompt,
   sendMessage,
-  formatMessages,
-  streamMessage
+  formatMessages
 };
-

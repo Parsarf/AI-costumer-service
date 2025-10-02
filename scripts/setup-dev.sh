@@ -1,90 +1,85 @@
 #!/bin/bash
 
-# Development environment setup script
-# Usage: ./scripts/setup-dev.sh
-
+# Development setup script for Shopify AI Support Bot
 set -e
 
-echo "🔧 Setting up development environment..."
+echo "🛠️ Setting up development environment..."
 
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
-# Check prerequisites
-echo -e "${YELLOW}Checking prerequisites...${NC}"
-
-# Check Node.js
-if ! command -v node &> /dev/null; then
-    echo "❌ Node.js not found. Please install Node.js 18+"
-    exit 1
-fi
+# Check Node.js version
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
 if [ "$NODE_VERSION" -lt 18 ]; then
-    echo "❌ Node.js 18+ required. Current version: $(node -v)"
+    echo -e "${RED}❌ Node.js 18+ required. Current version: $(node -v)${NC}"
     exit 1
 fi
-echo -e "${GREEN}✓ Node.js $(node -v)${NC}"
 
-# Check PostgreSQL
-if ! command -v psql &> /dev/null; then
-    echo "⚠️  PostgreSQL not found. Install PostgreSQL 14+ to run locally."
-else
-    echo -e "${GREEN}✓ PostgreSQL $(psql --version | cut -d' ' -f3)${NC}"
+echo -e "${GREEN}✓ Node.js version check passed${NC}"
+
+# Check if PostgreSQL is running
+if ! pg_isready &> /dev/null; then
+    echo -e "${YELLOW}⚠️ PostgreSQL not running. Please start PostgreSQL first.${NC}"
+    echo "On macOS: brew services start postgresql"
+    echo "On Ubuntu: sudo systemctl start postgresql"
+    exit 1
 fi
 
-# Install backend dependencies
-echo -e "${YELLOW}📦 Installing backend dependencies...${NC}"
+echo -e "${GREEN}✓ PostgreSQL is running${NC}"
+
+# Install dependencies
+echo -e "${YELLOW}📦 Installing dependencies...${NC}"
 cd backend
 npm install
-echo -e "${GREEN}✓ Backend dependencies installed${NC}"
 
-# Install widget dependencies
-echo -e "${YELLOW}📦 Installing widget dependencies...${NC}"
-cd ../chat-widget
-npm install
-cd ..
-echo -e "${GREEN}✓ Widget dependencies installed${NC}"
-
-# Setup .env file
-if [ ! -f "backend/.env" ]; then
-    echo -e "${YELLOW}Creating .env file...${NC}"
-    cp backend/env.example backend/.env
-    echo -e "${GREEN}✓ Created backend/.env${NC}"
-    echo ""
-    echo "⚠️  IMPORTANT: Update backend/.env with your credentials:"
-    echo "   - SHOPIFY_API_KEY"
-    echo "   - SHOPIFY_API_SECRET"
-    echo "   - CLAUDE_API_KEY"
-    echo "   - DATABASE_URL"
-    echo ""
-else
-    echo -e "${GREEN}✓ .env file already exists${NC}"
+# Create .env file if it doesn't exist
+if [ ! -f ".env" ]; then
+    echo -e "${YELLOW}📝 Creating .env file...${NC}"
+    cp env.example .env
+    echo -e "${YELLOW}⚠️ Please update .env with your actual credentials${NC}"
 fi
 
-# Setup database
-echo -e "${YELLOW}Setting up database...${NC}"
-echo "Run these commands to create and setup the database:"
-echo ""
-echo "  createdb shopify_support_bot"
-echo "  cd backend && npm run migrate"
-echo ""
+# Create database
+echo -e "${YELLOW}🗃️ Setting up database...${NC}"
+DB_NAME="shopify_support_bot_dev"
+createdb $DB_NAME 2>/dev/null || echo "Database $DB_NAME already exists"
 
-# Create logs directory
-mkdir -p backend/logs
-echo -e "${GREEN}✓ Created logs directory${NC}"
+# Update DATABASE_URL in .env
+if grep -q "DATABASE_URL=" .env; then
+    sed -i.bak "s|DATABASE_URL=.*|DATABASE_URL=postgresql://$(whoami)@localhost:5432/$DB_NAME|" .env
+else
+    echo "DATABASE_URL=postgresql://$(whoami)@localhost:5432/$DB_NAME" >> .env
+fi
 
-echo ""
-echo -e "${GREEN}✅ Development environment setup complete!${NC}"
+# Run migrations
+echo -e "${YELLOW}🔄 Running database migrations...${NC}"
+npx prisma migrate dev --name init
+
+# Generate Prisma client
+echo -e "${YELLOW}🔧 Generating Prisma client...${NC}"
+npx prisma generate
+
+# Install Shopify CLI if not present
+if ! command -v shopify &> /dev/null; then
+    echo -e "${YELLOW}📦 Installing Shopify CLI...${NC}"
+    npm install -g @shopify/cli
+fi
+
+echo -e "${GREEN}✅ Development setup complete!${NC}"
 echo ""
 echo "Next steps:"
-echo "1. Update backend/.env with your credentials"
-echo "2. Create database: createdb shopify_support_bot"
-echo "3. Run migrations: cd backend && npm run migrate"
-echo "4. Start development:"
-echo "   Terminal 1: cd backend && npm run dev"
-echo "   Terminal 2: cd chat-widget && npm start"
-echo "   Terminal 3: ngrok http 3001"
+echo "1. Update .env with your actual credentials"
+echo "2. Start ngrok: ngrok http 3001"
+echo "3. Update Shopify app URLs with ngrok URL"
+echo "4. Start development server: npm run dev"
+echo "5. Test installation: http://localhost:3001/auth?shop=your-dev-store.myshopify.com"
 echo ""
-
+echo "Useful commands:"
+echo "- View database: npx prisma studio"
+echo "- Reset database: npx prisma migrate reset"
+echo "- Run tests: npm test"
+echo "- View logs: npm run dev"
+echo ""

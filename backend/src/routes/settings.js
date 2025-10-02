@@ -1,40 +1,75 @@
 const express = require('express');
+const prisma = require('../lib/prisma');
+const logger = require('../utils/logger');
+
 const router = express.Router();
-const {
-  getSettings,
-  updateSettings,
-  getStoreName,
-  updateStoreName,
-  getTheme,
-  updateTheme,
-  resetSettings
-} = require('../controllers/settingsController');
-const { apiLimiter } = require('../middleware/rateLimit');
-const { asyncHandler } = require('../middleware/errorHandler');
 
-// Apply rate limiting
-router.use(apiLimiter);
+// Get shop settings
+router.get('/', async (req, res) => {
+  try {
+    const { shop } = req.query;
 
-// GET /api/settings/:shop
-router.get('/:shop', asyncHandler(getSettings));
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing shop parameter' });
+    }
 
-// PUT /api/settings/:shop
-router.put('/:shop', asyncHandler(updateSettings));
+    const shopData = await prisma.shop.findUnique({
+      where: { shop },
+      select: {
+        shop: true,
+        plan: true,
+        settings: true,
+        isActive: true,
+        createdAt: true
+      }
+    });
 
-// GET /api/settings/:shop/name
-router.get('/:shop/name', asyncHandler(getStoreName));
+    if (!shopData) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
 
-// PUT /api/settings/:shop/name
-router.put('/:shop/name', asyncHandler(updateStoreName));
+    res.json(shopData);
 
-// GET /api/settings/:shop/theme
-router.get('/:shop/theme', asyncHandler(getTheme));
+  } catch (error) {
+    logger.error('Get settings error:', error);
+    res.status(500).json({ error: 'Failed to get settings' });
+  }
+});
 
-// PUT /api/settings/:shop/theme
-router.put('/:shop/theme', asyncHandler(updateTheme));
+// Update shop settings
+router.put('/', async (req, res) => {
+  try {
+    const { shop } = req.query;
+    const { settings } = req.body;
 
-// POST /api/settings/:shop/reset
-router.post('/:shop/reset', asyncHandler(resetSettings));
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing shop parameter' });
+    }
+
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ error: 'Invalid settings format' });
+    }
+
+    const updatedShop = await prisma.shop.update({
+      where: { shop },
+      data: { 
+        settings: {
+          ...settings,
+          updatedAt: new Date().toISOString()
+        }
+      }
+    });
+
+    logger.info('Settings updated', { shop });
+    res.json({
+      success: true,
+      settings: updatedShop.settings
+    });
+
+  } catch (error) {
+    logger.error('Update settings error:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
 
 module.exports = router;
-

@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id           String   @id @default(cuid())
+  shop         String   @unique
+  accessToken  String
+  installedAt  DateTime @default(now())
+  plan         String   @default("free")
+  settings     Json?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  conversations Conversation[]
+  sessions      Session[]
+  
+  @@map("shops")
+}
+
+model Session {
+  id        String   @id
+  shop      String
+  state     String
+  isOnline  Boolean  @default(false)
+  expires   DateTime?
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  shop      String
+  userId    String?
+  prompt    String
+  reply     String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  @@map("conversations")
+}
+
+model BillingSubscription {
+  id                String   @id @default(cuid())
+  shopId            String   @unique
+  subscriptionId    String   @unique
+  planName          String
+  price             Float
+  currency          String   @default("USD")
+  status            String
+  trialDays         Int      @default(7)
+  trialEndsAt       DateTime?
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("billing_subscriptions")
+}

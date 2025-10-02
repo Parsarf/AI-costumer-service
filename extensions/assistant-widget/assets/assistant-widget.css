@@ -1,0 +1,115 @@
+/* AI Support Widget Styles */
+
+.ai-support-bubble {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ai-support-bubble:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+}
+
+.ai-support-window {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-support-messages {
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+
+.ai-support-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-support-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-support-messages::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}
+
+.ai-support-messages::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}
+
+.ai-support-message {
+  margin-bottom: 12px;
+  display: flex;
+}
+
+.ai-support-message-user {
+  justify-content: flex-end;
+}
+
+.ai-support-message-assistant {
+  justify-content: flex-start;
+}
+
+.ai-support-typing {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.ai-support-typing div {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  gap: 4px;
+}
+
+.ai-support-typing div div {
+  width: 8px;
+  height: 8px;
+  background: #999;
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+  padding: 0;
+  box-shadow: none;
+}
+
+.ai-support-typing div div:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ai-support-typing div div:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .ai-support-window {
+    width: calc(100vw - 40px) !important;
+    height: calc(100vh - 120px) !important;
+    right: 20px !important;
+    left: 20px !important;
+    bottom: 100px !important;
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "assistant-widget": {
+    "title": "AI Support Assistant",
+    "description": "Add an AI-powered customer support chat widget to your store",
+    "settings": {
+      "primary_color": {
+        "label": "Primary Color",
+        "description": "Choose the primary color for the chat widget"
+      },
+      "position": {
+        "label": "Widget Position",
+        "description": "Choose where to display the chat widget on your store"
+      }
+    }
+  }
+}

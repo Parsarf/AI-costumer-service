@@ -1,0 +1,14 @@
+api_version = "2024-01"
+
+[[extensions]]
+type = "theme"
+name = "assistant-widget"
+
+[extensions.targeting]
+target = "head"
+include = ["*"]
+
+[[extensions.blocks]]
+type = "assistant-widget"
+name = "AI Support Assistant"
+description = "Add an AI-powered customer support chat widget to your store"

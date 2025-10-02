@@ -1,0 +1,74 @@
+{% comment %}
+  AI Support Assistant Widget Block
+  This block adds a floating chat widget to the storefront
+{% endcomment %}
+
+<div id="ai-support-widget" 
+     data-shop="{{ shop.permanent_domain }}"
+     data-api-url="{{ app.api_url }}"
+     data-theme-color="{{ block.settings.primary_color | default: '#4F46E5' }}"
+     data-position="{{ block.settings.position | default: 'bottom-right' }}">
+</div>
+
+<script>
+  (function() {
+    const widget = document.getElementById('ai-support-widget');
+    const shop = widget.dataset.shop;
+    const apiUrl = widget.dataset.apiUrl;
+    const themeColor = widget.dataset.themeColor;
+    const position = widget.dataset.position;
+    
+    // Load widget styles
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '{{ "assistant-widget.css" | asset_url }}';
+    document.head.appendChild(link);
+    
+    // Load widget script
+    const script = document.createElement('script');
+    script.src = '{{ "assistant-widget.js" | asset_url }}';
+    script.async = true;
+    script.onload = function() {
+      if (window.AISupportWidget) {
+        window.AISupportWidget.init({
+          shop: shop,
+          apiUrl: apiUrl,
+          themeColor: themeColor,
+          position: position
+        });
+      }
+    };
+    document.head.appendChild(script);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "AI Support Assistant",
+  "target": "head",
+  "settings": [
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#4F46E5"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Widget Position",
+      "options": [
+        {
+          "value": "bottom-right",
+          "label": "Bottom Right"
+        },
+        {
+          "value": "bottom-left",
+          "label": "Bottom Left"
+        }
+      ],
+      "default": "bottom-right"
+    }
+  ]
+}
+{% endschema %}

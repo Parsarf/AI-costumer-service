@@ -1,4 +1,5 @@
 const express = require('express');
+const verifyAppProxy = require('../middleware/verifyProxy');
 const { shopify } = require('../lib/shopify');
 const prisma = require('../lib/prisma');
 const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/claudeService');
@@ -7,8 +8,8 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// Chat endpoint for embedded app
-router.post('/', async (req, res) => {
+// App proxy route for storefront chat
+router.post('/chat', verifyAppProxy, async (req, res) => {
   try {
     const { message, conversationId } = req.body;
     const shop = req.query.shop;
@@ -91,7 +92,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Chat error:', error);
+    logger.error('Proxy chat error:', error);
     res.status(500).json({ 
       error: 'Failed to process message',
       reply: "I'm sorry, I'm having trouble processing your message right now. Please try again in a moment."

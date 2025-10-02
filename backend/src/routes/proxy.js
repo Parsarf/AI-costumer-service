@@ -1,30 +1,21 @@
 const express = require('express');
 const verifyAppProxy = require('../middleware/verifyProxy');
+const { validateBilling } = require('../middleware/validateBilling');
 const { shopify } = require('../lib/shopify');
 const prisma = require('../lib/prisma');
 const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/claudeService');
-const { checkBillingStatus } = require('../services/billingService');
 const logger = require('../utils/logger');
 
 const router = express.Router();
 
 // App proxy route for storefront chat
-router.post('/chat', verifyAppProxy, async (req, res) => {
+router.post('/chat', verifyAppProxy, validateBilling, async (req, res) => {
   try {
     const { message, conversationId } = req.body;
     const shop = req.query.shop;
 
     if (!shop || !message) {
       return res.status(400).json({ error: 'Missing required parameters' });
-    }
-
-    // Check billing status
-    const billingStatus = await checkBillingStatus(shop);
-    if (!billingStatus.hasAccess) {
-      return res.status(403).json({ 
-        error: 'Subscription required',
-        message: 'Please upgrade your plan to use the AI support bot.'
-      });
     }
 
     // Get shop settings

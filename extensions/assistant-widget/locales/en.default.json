@@ -1,16 +1,35 @@
 {
   "assistant-widget": {
-    "title": "AI Support Assistant",
+    "title": "AI Assistant Widget",
     "description": "Add an AI-powered customer support chat widget to your store",
     "settings": {
+      "welcome_message": {
+        "label": "Welcome Message",
+        "description": "The first message customers see when they open the chat"
+      },
       "primary_color": {
-        "label": "Primary Color",
+        "label": "Widget Color",
         "description": "Choose the primary color for the chat widget"
       },
       "position": {
         "label": "Widget Position",
         "description": "Choose where to display the chat widget on your store"
+      },
+      "show_on_mobile": {
+        "label": "Show on Mobile",
+        "description": "Display the chat widget on mobile devices"
+      },
+      "auto_open_delay": {
+        "label": "Auto-open Delay (seconds)",
+        "description": "Automatically open chat after this many seconds (0 = disabled)"
       }
+    },
+    "widget": {
+      "welcome": "Hi! How can I help you today?",
+      "online": "Online now",
+      "placeholder": "Type your message...",
+      "error": "Sorry, I encountered an error. Please try again.",
+      "connection_error": "Sorry, I'm having trouble connecting. Please try again in a moment."
     }
   }
 }

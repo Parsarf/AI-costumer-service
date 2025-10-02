@@ -72,10 +72,34 @@ const webhookLimiter = rateLimit({
   message: 'Webhook rate limit exceeded'
 });
 
+/**
+ * Billing rate limiter (very restrictive)
+ */
+const billingLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 3, // 3 billing requests per 5 minutes
+  keyGenerator: (req) => {
+    const shop = req.query.shop || req.body.shop;
+    return shop ? `${shop}:${req.ip}` : req.ip;
+  },
+  message: 'Too many billing requests, please slow down.',
+  handler: (req, res) => {
+    const shop = req.query.shop || req.body.shop;
+    logger.warn('Billing rate limit exceeded', { 
+      shop: shop,
+      ip: req.ip 
+    });
+    res.status(429).json({
+      error: 'Too many billing requests, please try again later.'
+    });
+  }
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
   chatLimiter,
-  webhookLimiter
+  webhookLimiter,
+  billingLimiter
 };
 

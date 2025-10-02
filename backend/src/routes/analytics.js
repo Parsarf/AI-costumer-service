@@ -1,24 +1,177 @@
 const express = require('express');
+const prisma = require('../lib/prisma');
+const logger = require('../utils/logger');
+
 const router = express.Router();
-const {
-  getAnalytics,
-  getConversations,
-  getDashboardSummary
-} = require('../controllers/analyticsController');
-const { apiLimiter } = require('../middleware/rateLimit');
-const { asyncHandler } = require('../middleware/errorHandler');
 
-// Apply rate limiting
-router.use(apiLimiter);
+/**
+ * Get analytics for a shop
+ * GET /api/analytics?shop=example.myshopify.com
+ */
+router.get('/', async (req, res) => {
+  try {
+    const { shop } = req.query;
+    
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing shop parameter' });
+    }
 
-// GET /api/analytics/:shop
-router.get('/:shop', asyncHandler(getAnalytics));
+    // Get conversation statistics
+    const totalConversations = await prisma.conversation.count({
+      where: { shop }
+    });
 
-// GET /api/analytics/:shop/conversations
-router.get('/:shop/conversations', asyncHandler(getConversations));
+    const escalatedConversations = await prisma.conversation.count({
+      where: { 
+        shop,
+        metadata: {
+          path: ['escalated'],
+          equals: true
+        }
+      }
+    });
 
-// GET /api/analytics/:shop/dashboard
-router.get('/:shop/dashboard', asyncHandler(getDashboardSummary));
+    // Get conversations from last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    
+    const recentConversations = await prisma.conversation.findMany({
+      where: {
+        shop,
+        createdAt: {
+          gte: thirtyDaysAgo
+        }
+      },
+      select: {
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    // Calculate average response time (simplified)
+    const averageResponseTime = recentConversations.length > 0 ? 
+      recentConversations.reduce((acc, conv) => {
+        const responseTime = conv.updatedAt.getTime() - conv.createdAt.getTime();
+        return acc + (responseTime / 1000); // Convert to seconds
+      }, 0) / recentConversations.length : 0;
+
+    // Get conversations by day for the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    const dailyConversations = await prisma.conversation.groupBy({
+      by: ['createdAt'],
+      where: {
+        shop,
+        createdAt: {
+          gte: sevenDaysAgo
+        }
+      },
+      _count: {
+        id: true
+      }
+    });
+
+    // Format daily data
+    const dailyData = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      date.setHours(0, 0, 0, 0);
+      
+      const dayData = dailyConversations.find(d => 
+        d.createdAt.toDateString() === date.toDateString()
+      );
+      
+      return {
+        date: date.toISOString().split('T')[0],
+        count: dayData?._count.id || 0
+      };
+    });
+
+    // Get top customer issues (from conversation prompts)
+    const topIssues = await prisma.conversation.groupBy({
+      by: ['prompt'],
+      where: {
+        shop,
+        createdAt: {
+          gte: thirtyDaysAgo
+        }
+      },
+      _count: {
+        id: true
+      },
+      orderBy: {
+        _count: {
+          id: 'desc'
+        }
+      },
+      take: 5
+    });
+
+    const analytics = {
+      totalConversations,
+      escalatedConversations,
+      escalationRate: totalConversations > 0 ? 
+        (escalatedConversations / totalConversations * 100).toFixed(1) : 0,
+      averageResponseTime: Math.round(averageResponseTime),
+      recentConversations: recentConversations.length,
+      dailyData,
+      topIssues: topIssues.map(issue => ({
+        prompt: issue.prompt.substring(0, 100) + (issue.prompt.length > 100 ? '...' : ''),
+        count: issue._count.id
+      })),
+      lastUpdated: new Date().toISOString()
+    };
+
+    logger.info('Analytics retrieved', { shop, totalConversations });
+
+    res.json(analytics);
+
+  } catch (error) {
+    logger.error('Analytics error:', error);
+    res.status(500).json({ error: 'Failed to get analytics' });
+  }
+});
+
+/**
+ * Get conversation details
+ * GET /api/analytics/conversations?shop=example.myshopify.com&limit=10&offset=0
+ */
+router.get('/conversations', async (req, res) => {
+  try {
+    const { shop, limit = 10, offset = 0 } = req.query;
+    
+    if (!shop) {
+      return res.status(400).json({ error: 'Missing shop parameter' });
+    }
+
+    const conversations = await prisma.conversation.findMany({
+      where: { shop },
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(limit),
+      skip: parseInt(offset),
+      select: {
+        id: true,
+        prompt: true,
+        reply: true,
+        createdAt: true,
+        updatedAt: true,
+        metadata: true
+      }
+    });
+
+    const totalCount = await prisma.conversation.count({
+      where: { shop }
+    });
+
+    res.json({
+      conversations,
+      totalCount,
+      hasMore: (parseInt(offset) + parseInt(limit)) < totalCount
+    });
+
+  } catch (error) {
+    logger.error('Conversations analytics error:', error);
+    res.status(500).json({ error: 'Failed to get conversations' });
+  }
+});
 
 module.exports = router;
-

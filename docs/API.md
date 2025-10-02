@@ -1,218 +1,115 @@
 # API Documentation
 
-Complete API reference for the Shopify AI Customer Support Bot.
+## Overview
 
-## Base URL
+The Shopify AI Support Bot API provides endpoints for chat functionality, settings management, billing, analytics, and webhooks.
 
-```
-Production: https://your-app.railway.app
-Development: http://localhost:3001
-```
+**Base URL:** `https://your-app.railway.app`
 
 ## Authentication
 
-Most endpoints require a valid Shopify shop parameter. OAuth authentication is handled via the `/auth` endpoints.
+### OAuth Flow
 
----
+1. **Initiate OAuth**
+   ```
+   GET /auth?shop=example.myshopify.com
+   ```
+   - Redirects to Shopify OAuth
+   - Returns: Redirect to Shopify authorization page
 
-## Authentication Endpoints
+2. **OAuth Callback**
+   ```
+   GET /auth/callback?code=xxx&shop=example.myshopify.com&state=xxx
+   ```
+   - Handled automatically by Shopify
+   - Returns: Redirect to embedded app
 
-### Initiate OAuth Flow
+3. **Verify Authentication**
+   ```
+   GET /auth/verify?shop=example.myshopify.com
+   ```
+   - Returns: `{ authenticated: boolean, shop: string, storeName: string }`
 
-```http
-GET /auth?shop={shop}
+## Chat API
+
+### Send Message (Embedded App)
 ```
-
-**Parameters:**
-- `shop` (required): Shopify store domain (e.g., `example.myshopify.com`)
-
-**Response:**
-Redirects to Shopify OAuth authorization page.
-
----
-
-### OAuth Callback
-
-```http
-GET /auth/callback?code={code}&shop={shop}&state={state}&hmac={hmac}
-```
-
-**Parameters:**
-- `code` (required): Authorization code from Shopify
-- `shop` (required): Shop domain
-- `state` (required): CSRF token
-- `hmac` (required): HMAC signature
-
-**Response:**
-HTML page confirming installation or error.
-
----
-
-### Verify Authentication
-
-```http
-GET /auth/verify?shop={shop}
-```
-
-**Response:**
-```json
-{
-  "authenticated": true,
-  "shop": "example.myshopify.com",
-  "storeName": "Example Store"
-}
-```
-
----
-
-## Chat Endpoints
-
-### Send Message
-
-```http
-POST /api/chat
+POST /api/chat?shop=example.myshopify.com
 ```
 
 **Request Body:**
 ```json
 {
-  "message": "Where is my order #1234?",
-  "conversationId": "conv_1234567890_abc",
-  "shop": "example.myshopify.com",
-  "customerEmail": "customer@example.com",
-  "customerName": "John Doe"
+  "message": "I need help with my order",
+  "conversationId": "optional-conversation-id"
 }
 ```
 
 **Response:**
 ```json
 {
-  "reply": "I found your order #1234! It was shipped on...",
-  "conversationId": "conv_1234567890_abc",
-  "needsEscalation": false,
-  "metadata": {
-    "orderData": {
-      "orderNumber": "#1234",
-      "status": "Fulfilled",
-      "total": "99.99"
-    },
-    "intent": "order_tracking",
-    "responseTime": 847
+  "reply": "I'd be happy to help you with your order!",
+  "conversationId": "conv_123456",
+  "usage": {
+    "input_tokens": 150,
+    "output_tokens": 75
   }
 }
 ```
 
-**Error Response:**
-```json
-{
-  "error": "Failed to process message",
-  "reply": "Sorry, I'm having trouble..."
-}
+**Rate Limits:** 20 requests per minute per shop
+
+### Send Message (Storefront via App Proxy)
+```
+POST /apps/aibot/chat?shop=example.myshopify.com&timestamp=1234567890&signature=xxx
 ```
 
----
+**Request Body:** Same as embedded app
 
-### Get Conversation
+**Response:** Same as embedded app
 
-```http
-GET /api/chat/conversation/{conversationId}?shop={shop}
-```
+**Rate Limits:** 20 requests per minute per shop
 
-**Response:**
-```json
-{
-  "id": "conv_1234567890_abc",
-  "status": "active",
-  "escalated": false,
-  "customerEmail": "customer@example.com",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Where is my order?",
-      "createdAt": "2024-01-15T10:30:00Z"
-    },
-    {
-      "role": "assistant",
-      "content": "Let me check that for you...",
-      "createdAt": "2024-01-15T10:30:02Z"
-    }
-  ],
-  "createdAt": "2024-01-15T10:30:00Z"
-}
-```
-
----
-
-### Get Welcome Message
-
-```http
-GET /api/chat/welcome?shop={shop}&customerName={name}
-```
-
-**Response:**
-```json
-{
-  "message": "Hi John! 👋 Welcome to Example Store...",
-  "theme": {
-    "primaryColor": "#4F46E5",
-    "position": "bottom-right"
-  }
-}
-```
-
----
-
-## Settings Endpoints
+## Settings API
 
 ### Get Settings
-
-```http
-GET /api/settings/{shop}
+```
+GET /api/settings?shop=example.myshopify.com
 ```
 
 **Response:**
 ```json
 {
   "shop": "example.myshopify.com",
-  "storeName": "Example Store",
+  "plan": "paid",
   "settings": {
-    "welcomeMessage": "Hi! How can I help?",
+    "welcomeMessage": "Hi! How can I help you today?",
     "returnPolicy": "30 day returns...",
     "shippingPolicy": "Ships in 1-2 days...",
-    "supportEmail": "support@example.com",
+    "supportEmail": "support@store.com",
     "botPersonality": "friendly",
-    "escalationEmail": "escalations@example.com",
-    "chatbotEnabled": true,
-    "theme": {
-      "primaryColor": "#4F46E5",
-      "position": "bottom-right"
-    }
+    "primaryColor": "#4F46E5"
   },
-  "subscription": {
-    "tier": "pro",
-    "conversationCount": 342,
-    "conversationLimit": 5000
-  }
+  "isActive": true,
+  "createdAt": "2024-01-01T00:00:00.000Z"
 }
 ```
 
----
-
 ### Update Settings
-
-```http
-PUT /api/settings/{shop}
+```
+PUT /api/settings?shop=example.myshopify.com
 ```
 
 **Request Body:**
 ```json
 {
   "settings": {
-    "welcomeMessage": "Hello! How can we help you today?",
+    "welcomeMessage": "Hello! How can I assist you?",
+    "returnPolicy": "Updated return policy...",
+    "shippingPolicy": "Updated shipping policy...",
+    "supportEmail": "help@store.com",
     "botPersonality": "professional",
-    "theme": {
-      "primaryColor": "#10B981"
-    }
+    "primaryColor": "#FF6B6B"
   }
 }
 ```
@@ -221,204 +118,165 @@ PUT /api/settings/{shop}
 ```json
 {
   "success": true,
-  "settings": { /* updated settings */ },
-  "message": "Settings updated successfully"
+  "settings": { /* updated settings */ }
 }
 ```
 
----
+## Billing API
 
-### Update Theme
-
-```http
-PUT /api/settings/{shop}/theme
+### Create Subscription
+```
+POST /billing/create?shop=example.myshopify.com&plan=starter
 ```
 
-**Request Body:**
+**Query Parameters:**
+- `plan`: `starter` | `pro` | `scale` (default: `starter`)
+
+**Response:**
 ```json
 {
-  "theme": {
-    "primaryColor": "#EF4444",
-    "position": "bottom-left"
+  "hasActiveSubscription": false,
+  "confirmationUrl": "https://shopify.com/...",
+  "subscription": {
+    "id": "sub_123456",
+    "name": "AI Support Bot - Starter Plan",
+    "status": "PENDING",
+    "price": 19.99,
+    "currency": "USD",
+    "trialDays": 7,
+    "test": true
   }
 }
 ```
 
----
+### Billing Callback
+```
+GET /billing/callback?shop=example.myshopify.com
+```
 
-### Reset Settings
+**Response:** Redirect to embedded app with billing status
 
-```http
-POST /api/settings/{shop}/reset
+### Cancel Subscription
+```
+POST /billing/cancel?shop=example.myshopify.com
 ```
 
 **Response:**
 ```json
 {
   "success": true,
-  "settings": { /* default settings */ },
-  "message": "Settings reset to default values"
+  "message": "Subscription cancelled successfully"
 }
 ```
 
----
+### Get Billing Status
+```
+GET /billing/status?shop=example.myshopify.com
+```
 
-## Analytics Endpoints
+**Response:**
+```json
+{
+  "hasAccess": true,
+  "plan": "starter",
+  "status": "active",
+  "trialEndsAt": "2024-01-08T00:00:00.000Z",
+  "currentPeriodEnd": "2024-02-01T00:00:00.000Z",
+  "price": 19.99,
+  "currency": "USD",
+  "message": "Subscription active"
+}
+```
+
+## Analytics API
 
 ### Get Analytics
-
-```http
-GET /api/analytics/{shop}?startDate={date}&endDate={date}
 ```
-
-**Query Parameters:**
-- `startDate` (optional): ISO date string
-- `endDate` (optional): ISO date string
+GET /api/analytics?shop=example.myshopify.com
+```
 
 **Response:**
 ```json
 {
-  "shop": "example.myshopify.com",
-  "period": {
-    "startDate": "2024-01-01T00:00:00Z",
-    "endDate": "2024-01-31T23:59:59Z"
-  },
-  "analytics": {
-    "totalConversations": 1250,
-    "escalatedConversations": 85,
-    "resolvedConversations": 1100,
-    "activeConversations": 65,
-    "escalationRate": "6.80",
-    "resolutionRate": "88.00",
-    "avgMessagesPerConversation": "4.2",
-    "avgResponseTime": 823,
-    "subscription": {
-      "tier": "pro",
-      "conversationCount": 1250,
-      "conversationLimit": 5000,
-      "usagePercentage": "25.00"
+  "totalConversations": 150,
+  "escalatedConversations": 12,
+  "escalationRate": "8.0",
+  "averageResponseTime": 2.5,
+  "recentConversations": 45,
+  "dailyData": [
+    { "date": "2024-01-01", "count": 5 },
+    { "date": "2024-01-02", "count": 8 },
+    // ... last 7 days
+  ],
+  "topIssues": [
+    {
+      "prompt": "I need to return my order...",
+      "count": 15
     }
-  }
+  ],
+  "lastUpdated": "2024-01-08T12:00:00.000Z"
 }
 ```
 
----
-
 ### Get Conversations
-
-```http
-GET /api/analytics/{shop}/conversations?status={status}&escalated={boolean}&limit={n}&offset={n}
+```
+GET /api/analytics/conversations?shop=example.myshopify.com&limit=10&offset=0
 ```
 
 **Query Parameters:**
-- `status` (optional): `active`, `escalated`, `resolved`, `closed`
-- `escalated` (optional): `true` or `false`
-- `limit` (optional): Number of results (default: 50)
-- `offset` (optional): Pagination offset (default: 0)
+- `limit`: Number of conversations to return (default: 10)
+- `offset`: Number of conversations to skip (default: 0)
 
 **Response:**
 ```json
 {
-  "shop": "example.myshopify.com",
   "conversations": [
     {
-      "id": "conv_1234567890_abc",
-      "customerEmail": "customer@example.com",
-      "customerName": "John Doe",
-      "status": "resolved",
-      "escalated": false,
-      "messageCount": 5,
-      "lastMessageAt": "2024-01-15T10:35:00Z",
-      "createdAt": "2024-01-15T10:30:00Z",
-      "lastMessage": {
-        "content": "Thank you for your help!",
-        "role": "user",
-        "createdAt": "2024-01-15T10:35:00Z"
+      "id": "conv_123456",
+      "prompt": "I need help with my order",
+      "reply": "I'd be happy to help...",
+      "createdAt": "2024-01-08T12:00:00.000Z",
+      "updatedAt": "2024-01-08T12:01:00.000Z",
+      "metadata": {
+        "escalated": false,
+        "orderNumber": "1001"
       }
     }
   ],
-  "total": 1250
+  "totalCount": 150,
+  "hasMore": true
 }
 ```
 
----
+## Webhooks
 
-### Get Dashboard Summary
-
-```http
-GET /api/analytics/{shop}/dashboard
-```
-
-**Response:**
-```json
-{
-  "shop": "example.myshopify.com",
-  "storeName": "Example Store",
-  "subscription": {
-    "tier": "pro",
-    "status": "active",
-    "conversationCount": 342,
-    "conversationLimit": 5000,
-    "usagePercentage": "6.84"
-  },
-  "analytics": {
-    "period": "30 days",
-    "totalConversations": 342,
-    "escalatedConversations": 23,
-    "resolvedConversations": 298,
-    "activeConversations": 21,
-    "escalationRate": "6.73",
-    "resolutionRate": "87.13",
-    "avgMessagesPerConversation": "4.1",
-    "avgResponseTime": 789
-  },
-  "recentEscalations": [
-    {
-      "id": "conv_1234567890_abc",
-      "customerEmail": "frustrated@customer.com",
-      "reason": "Customer explicitly requested human support",
-      "createdAt": "2024-01-15T14:20:00Z"
-    }
-  ]
-}
-```
-
----
-
-## Webhook Endpoints
+All webhooks require HMAC verification using the `X-Shopify-Hmac-Sha256` header.
 
 ### App Uninstalled
-
-```http
+```
 POST /webhooks/app/uninstalled
 ```
 
 **Headers:**
-- `X-Shopify-Shop-Domain`: Shop domain
 - `X-Shopify-Hmac-Sha256`: HMAC signature
+- `X-Shopify-Shop-Domain`: Shop domain
 
-**Response:**
-```json
-{
-  "message": "Uninstall processed successfully"
-}
-```
-
----
+**Response:** `200 OK`
 
 ### Customer Data Request (GDPR)
-
-```http
+```
 POST /webhooks/customers/data_request
 ```
+
+**Headers:**
+- `X-Shopify-Hmac-Sha256`: HMAC signature
+- `X-Shopify-Shop-Domain`: Shop domain
 
 **Request Body:**
 ```json
 {
-  "shop_id": 12345,
-  "shop_domain": "example.myshopify.com",
   "customer": {
-    "id": 67890,
+    "id": 123456,
     "email": "customer@example.com",
     "first_name": "John",
     "last_name": "Doe"
@@ -426,83 +284,164 @@ POST /webhooks/customers/data_request
 }
 ```
 
-**Response:**
-```json
-{
-  "message": "Data request processed",
-  "data": { /* customer data */ }
-}
-```
-
----
+**Response:** `200 OK`
 
 ### Customer Redact (GDPR)
-
-```http
+```
 POST /webhooks/customers/redact
 ```
 
-**Response:**
-```json
-{
-  "message": "Customer data redacted successfully",
-  "deletedConversations": 5
-}
-```
+**Headers:** Same as data request
 
----
+**Request Body:** Same as data request
+
+**Response:** `200 OK`
 
 ### Shop Redact (GDPR)
-
-```http
+```
 POST /webhooks/shop/redact
 ```
 
+**Headers:**
+- `X-Shopify-Hmac-Sha256`: HMAC signature
+
+**Request Body:**
+```json
+{
+  "shop_domain": "example.myshopify.com",
+  "shop_id": 123456
+}
+```
+
+**Response:** `200 OK`
+
+## Health Checks
+
+### Health Check
+```
+GET /health
+```
+
 **Response:**
 ```json
 {
-  "message": "Shop data redacted successfully",
-  "deletedConversations": 1250
+  "status": "healthy",
+  "timestamp": "2024-01-08T12:00:00.000Z",
+  "version": "1.0.0",
+  "uptime": 3600,
+  "memory": {
+    "rss": 50000000,
+    "heapTotal": 20000000,
+    "heapUsed": 15000000
+  },
+  "environment": "production"
 }
 ```
 
----
+### Readiness Check
+```
+GET /ready
+```
+
+**Response:**
+```json
+{
+  "status": "ready",
+  "checks": {
+    "database": true,
+    "claude": true,
+    "timestamp": "2024-01-08T12:00:00.000Z"
+  },
+  "message": "All dependencies are healthy"
+}
+```
+
+## Error Responses
+
+### 400 Bad Request
+```json
+{
+  "error": "Missing required parameters",
+  "details": "shop parameter is required"
+}
+```
+
+### 401 Unauthorized
+```json
+{
+  "error": "Invalid webhook signature"
+}
+```
+
+### 402 Payment Required
+```json
+{
+  "error": "Payment Required",
+  "message": "Please upgrade your plan to use the AI support bot.",
+  "plan": "free",
+  "status": "inactive",
+  "upgradeUrl": "https://your-app.railway.app/app?shop=example.myshopify.com&billing=upgrade"
+}
+```
+
+### 429 Too Many Requests
+```json
+{
+  "error": "Too many requests",
+  "message": "Please try again later",
+  "retryAfter": "15 minutes"
+}
+```
+
+### 500 Internal Server Error
+```json
+{
+  "error": "Internal server error",
+  "details": "Error message (development only)"
+}
+```
 
 ## Rate Limits
 
-- **Chat Endpoint**: 20 requests/minute per shop
-- **API Endpoints**: 100 requests/15 minutes per IP
-- **Auth Endpoints**: 10 requests/15 minutes per IP
-- **Webhooks**: 60 requests/minute
+| Endpoint | Limit | Window |
+|----------|-------|--------|
+| `/api/*` | 100 requests | 15 minutes |
+| `/api/chat` | 20 requests | 1 minute |
+| `/auth/*` | 10 requests | 15 minutes |
+| `/webhooks/*` | 60 requests | 1 minute |
+| `/billing/*` | 3 requests | 5 minutes |
 
-## Error Codes
+## Security
 
-- `400` - Bad Request (invalid parameters)
-- `401` - Unauthorized (invalid authentication)
-- `403` - Forbidden (rate limit exceeded, quota exceeded)
-- `404` - Not Found (resource doesn't exist)
-- `429` - Too Many Requests (rate limit)
-- `500` - Internal Server Error
+- All requests must use HTTPS in production
+- Webhooks require HMAC verification
+- Access tokens are encrypted in the database
+- Rate limiting prevents abuse
+- Input validation prevents XSS and injection attacks
+- CORS is configured for Shopify domains only
 
-## Error Response Format
+## Examples
 
-```json
-{
-  "error": "Error message here",
-  "details": "Additional context (development only)"
-}
+### cURL Examples
+
+**Send Chat Message:**
+```bash
+curl -X POST "https://your-app.railway.app/api/chat?shop=example.myshopify.com" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "I need help with my order"}'
 ```
 
----
+**Get Settings:**
+```bash
+curl "https://your-app.railway.app/api/settings?shop=example.myshopify.com"
+```
 
-## Webhooks Setup
+**Create Subscription:**
+```bash
+curl -X POST "https://your-app.railway.app/billing/create?shop=example.myshopify.com&plan=starter"
+```
 
-Register webhooks in Shopify Partners Dashboard:
-
-1. App Setup → Webhooks
-2. Add webhook subscriptions:
-   - `app/uninstalled` → `{APP_URL}/webhooks/app/uninstalled`
-   - `customers/data_request` → `{APP_URL}/webhooks/customers/data_request`
-   - `customers/redact` → `{APP_URL}/webhooks/customers/redact`
-   - `shop/redact` → `{APP_URL}/webhooks/shop/redact`
-
+**Health Check:**
+```bash
+curl "https://your-app.railway.app/health"
+```

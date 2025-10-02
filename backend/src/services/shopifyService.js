@@ -109,77 +109,21 @@ async function fetchCustomerOrders(shop, accessToken, customerId, limit = 10) {
 }
 
 /**
- * Install script tag on store (widget injection)
+ * Install script tag on store (DEPRECATED - Using Theme App Extension)
+ * This function is kept for backwards compatibility but does nothing
  */
 async function installScriptTag(shop, accessToken) {
-  try {
-    const client = createShopifyClient(shop, accessToken);
-    
-    const scriptSrc = `${process.env.APP_URL}/widget/loader.js?shop=${shop}`;
-    
-    logger.info(`Installing script tag on ${shop}`, { scriptSrc });
-
-    // Check if script tag already exists
-    const existingResponse = await client.get({
-      path: 'script_tags',
-      query: { src: scriptSrc }
-    });
-
-    if (existingResponse.body.script_tags.length > 0) {
-      logger.info('Script tag already installed');
-      return existingResponse.body.script_tags[0];
-    }
-
-    // Install new script tag
-    const response = await client.post({
-      path: 'script_tags',
-      data: {
-        script_tag: {
-          event: 'onload',
-          src: scriptSrc,
-          display_scope: 'all'
-        }
-      }
-    });
-
-    logger.info('Script tag installed successfully');
-    return response.body.script_tag;
-  } catch (error) {
-    logger.error('Error installing script tag:', error);
-    throw error;
-  }
+  logger.info(`Script tag installation skipped for ${shop} - Using Theme App Extension instead`);
+  return { id: 'deprecated', message: 'Using Theme App Extension' };
 }
 
 /**
- * Uninstall script tag from store
+ * Uninstall script tag from store (DEPRECATED - Using Theme App Extension)
+ * This function is kept for backwards compatibility but does nothing
  */
 async function uninstallScriptTag(shop, accessToken) {
-  try {
-    const client = createShopifyClient(shop, accessToken);
-    
-    const scriptSrc = `${process.env.APP_URL}/widget/loader.js?shop=${shop}`;
-    
-    logger.info(`Uninstalling script tag from ${shop}`);
-
-    // Find existing script tags
-    const response = await client.get({
-      path: 'script_tags',
-      query: { src: scriptSrc }
-    });
-
-    // Delete all matching script tags
-    for (const scriptTag of response.body.script_tags) {
-      await client.delete({
-        path: `script_tags/${scriptTag.id}`
-      });
-      logger.info(`Deleted script tag ${scriptTag.id}`);
-    }
-
-    return true;
-  } catch (error) {
-    logger.error('Error uninstalling script tag:', error);
-    return false;
-  }
+  logger.info(`Script tag removal skipped for ${shop} - Using Theme App Extension instead`);
+  return true;
 }
 
 /**

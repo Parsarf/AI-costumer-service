@@ -2,28 +2,21 @@ const express = require('express');
 const { shopify } = require('../lib/shopify');
 const prisma = require('../lib/prisma');
 const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/claudeService');
-const { checkBillingStatus } = require('../services/billingService');
+const { validateBilling } = require('../middleware/validateBilling');
+const { chatLimiter } = require('../middleware/rateLimit');
+const { validateInput } = require('../middleware/validateInput');
 const logger = require('../utils/logger');
 
 const router = express.Router();
 
 // Chat endpoint for embedded app
-router.post('/', async (req, res) => {
+router.post('/', chatLimiter, validateInput, validateBilling, async (req, res) => {
   try {
     const { message, conversationId } = req.body;
     const shop = req.query.shop;
 
     if (!shop || !message) {
       return res.status(400).json({ error: 'Missing required parameters' });
-    }
-
-    // Check billing status
-    const billingStatus = await checkBillingStatus(shop);
-    if (!billingStatus.hasAccess) {
-      return res.status(403).json({ 
-        error: 'Subscription required',
-        message: 'Please upgrade your plan to use the AI support bot.'
-      });
     }
 
     // Get shop settings

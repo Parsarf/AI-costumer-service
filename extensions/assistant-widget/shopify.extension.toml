@@ -1,14 +1,49 @@
-api_version = "2024-01"
+# Theme App Extension Configuration
+# This file configures the AI Assistant Widget for Shopify themes
 
 [[extensions]]
 type = "theme"
-name = "assistant-widget"
-
-[extensions.targeting]
-target = "head"
-include = ["*"]
-
-[[extensions.blocks]]
-type = "assistant-widget"
-name = "AI Support Assistant"
+name = "AI Assistant Widget"
 description = "Add an AI-powered customer support chat widget to your store"
+
+[extensions.settings]
+  [[extensions.settings.settings]]
+  type = "text"
+  id = "welcome_message"
+  label = "Welcome Message"
+  default = "Hi! How can I help you today?"
+  info = "The first message customers see when they open the chat"
+
+  [[extensions.settings.settings]]
+  type = "color"
+  id = "primary_color"
+  label = "Widget Color"
+  default = "#4F46E5"
+  info = "Choose the primary color for the chat widget"
+
+  [[extensions.settings.settings]]
+  type = "select"
+  id = "position"
+  label = "Widget Position"
+  options = [
+    { value = "bottom-right", label = "Bottom Right" },
+    { value = "bottom-left", label = "Bottom Left" }
+  ]
+  default = "bottom-right"
+  info = "Choose where to display the chat widget on your store"
+
+  [[extensions.settings.settings]]
+  type = "checkbox"
+  id = "show_on_mobile"
+  label = "Show on Mobile"
+  default = true
+  info = "Display the chat widget on mobile devices"
+
+  [[extensions.settings.settings]]
+  type = "number"
+  id = "auto_open_delay"
+  label = "Auto-open Delay (seconds)"
+  default = 0
+  min = 0
+  max = 60
+  info = "Automatically open chat after this many seconds (0 = disabled)"

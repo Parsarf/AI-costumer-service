@@ -1,6 +1,7 @@
 /**
- * AI Support Widget - Storefront Chat Interface
+ * AI Assistant Widget - Storefront Chat Interface
  * This script creates a floating chat widget that communicates with the app proxy
+ * Designed for Shopify Theme App Extensions
  */
 
 (function() {
@@ -11,31 +12,51 @@
   let isOpen = false;
   let conversationId = null;
   let messages = [];
+  let autoOpenTimer = null;
 
   // DOM elements
-  let chatBubble, chatWindow, messageList, inputBox, sendButton;
+  let chatBubble, chatWindow, messageList, inputBox, sendButton, closeButton;
 
   // Initialize widget
-  window.AISupportWidget = {
-    init: function(options) {
+  window.AIAssistantWidget = {
+    init: function() {
+      const rootElement = document.getElementById('ai-assistant-root');
+      if (!rootElement) {
+        console.error('AI Assistant: Root element not found');
+        return;
+      }
+
+      // Read configuration from data attributes
       config = {
-        shop: options.shop,
-        apiUrl: options.apiUrl,
-        themeColor: options.themeColor || '#4F46E5',
-        position: options.position || 'bottom-right'
+        shop: rootElement.dataset.shop,
+        apiUrl: rootElement.dataset.apiUrl,
+        welcomeMessage: rootElement.dataset.welcomeMessage || 'Hi! How can I help you today?',
+        primaryColor: rootElement.dataset.primaryColor || '#4F46E5',
+        position: rootElement.dataset.position || 'bottom-right',
+        showMobile: rootElement.dataset.showMobile === 'true',
+        autoOpenDelay: parseInt(rootElement.dataset.autoOpen) || 0
       };
+
+      // Check if should show on mobile
+      if (!config.showMobile && window.innerWidth <= 768) {
+        return;
+      }
 
       createWidget();
       loadConversationId();
+      setupAutoOpen();
+
+      // Show the root element
+      rootElement.style.display = 'block';
     }
   };
 
   function createWidget() {
     // Create chat bubble
     chatBubble = document.createElement('div');
-    chatBubble.className = 'ai-support-bubble';
+    chatBubble.className = 'ai-assistant-bubble';
     chatBubble.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="white"/>
         <path d="M7 9H17V11H7V9ZM7 12H14V14H7V12ZM7 6H17V8H7V6Z" fill="white"/>
       </svg>
@@ -46,7 +67,7 @@
       bottom: 20px;
       width: 60px;
       height: 60px;
-      background: linear-gradient(135deg, ${config.themeColor} 0%, ${adjustColor(config.themeColor, -20)} 100%);
+      background: linear-gradient(135deg, ${config.primaryColor} 0%, ${adjustColor(config.primaryColor, -20)} 100%);
       border-radius: 50%;
       cursor: pointer;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
@@ -54,17 +75,20 @@
       align-items: center;
       justify-content: center;
       z-index: 999999;
-      transition: transform 0.3s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: none;
+      outline: none;
     `;
 
     // Create chat window
     chatWindow = document.createElement('div');
-    chatWindow.className = 'ai-support-window';
+    chatWindow.className = 'ai-assistant-window';
     chatWindow.style.cssText = `
       position: fixed;
       ${config.position.includes('right') ? 'right: 20px;' : 'left: 20px;'}
       bottom: 100px;
       width: 380px;
+      max-width: calc(100vw - 40px);
       height: 500px;
       max-height: calc(100vh - 120px);
       background: white;
@@ -74,23 +98,25 @@
       flex-direction: column;
       z-index: 999999;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      border: 1px solid #e9ecef;
     `;
 
     chatWindow.innerHTML = `
-      <div class="ai-support-header" style="
-        background: linear-gradient(135deg, ${config.themeColor} 0%, ${adjustColor(config.themeColor, -20)} 100%);
+      <div class="ai-assistant-header" style="
+        background: linear-gradient(135deg, ${config.primaryColor} 0%, ${adjustColor(config.primaryColor, -20)} 100%);
         color: white;
         padding: 16px 20px;
         border-radius: 12px 12px 0 0;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-shrink: 0;
       ">
         <div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 600;">AI Support</h3>
-          <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">Online now</p>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 600; line-height: 1.2;">AI Support</h3>
+          <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; line-height: 1.2;">Online now</p>
         </div>
-        <button class="ai-support-close" style="
+        <button class="ai-assistant-close" style="
           background: rgba(255,255,255,0.2);
           border: none;
           color: white;
@@ -101,21 +127,28 @@
           display: flex;
           align-items: center;
           justify-content: center;
+          font-size: 18px;
+          line-height: 1;
+          transition: background-color 0.2s ease;
         ">×</button>
       </div>
-      <div class="ai-support-messages" style="
+      <div class="ai-assistant-messages" style="
         flex: 1;
         overflow-y: auto;
         padding: 20px;
         background: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       "></div>
-      <div class="ai-support-input" style="
+      <div class="ai-assistant-input" style="
         padding: 16px;
         border-top: 1px solid #e9ecef;
         background: white;
         border-radius: 0 0 12px 12px;
+        flex-shrink: 0;
       ">
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
           <input type="text" placeholder="Type your message..." style="
             flex: 1;
             padding: 12px 16px;
@@ -123,11 +156,13 @@
             border-radius: 24px;
             outline: none;
             font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
           ">
-          <button style="
+          <button class="ai-assistant-send" style="
             width: 40px;
             height: 40px;
-            background: ${config.themeColor};
+            background: ${config.primaryColor};
             color: white;
             border: none;
             border-radius: 50%;
@@ -135,15 +170,19 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 16px;
+            transition: background-color 0.2s ease;
+            flex-shrink: 0;
           ">→</button>
         </div>
       </div>
     `;
 
     // Get references to elements
-    messageList = chatWindow.querySelector('.ai-support-messages');
+    messageList = chatWindow.querySelector('.ai-assistant-messages');
     inputBox = chatWindow.querySelector('input');
-    sendButton = chatWindow.querySelector('button');
+    sendButton = chatWindow.querySelector('.ai-assistant-send');
+    closeButton = chatWindow.querySelector('.ai-assistant-close');
 
     // Add to DOM
     document.body.appendChild(chatBubble);
@@ -151,7 +190,7 @@
 
     // Add event listeners
     chatBubble.addEventListener('click', toggleChat);
-    chatWindow.querySelector('.ai-support-close').addEventListener('click', closeChat);
+    closeButton.addEventListener('click', closeChat);
     sendButton.addEventListener('click', sendMessage);
     inputBox.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
@@ -159,8 +198,49 @@
       }
     });
 
+    // Add hover effects
+    chatBubble.addEventListener('mouseenter', function() {
+      this.style.transform = 'scale(1.1)';
+      this.style.boxShadow = '0 6px 24px rgba(0,0,0,0.2)';
+    });
+    chatBubble.addEventListener('mouseleave', function() {
+      this.style.transform = 'scale(1)';
+      this.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+    });
+
+    closeButton.addEventListener('mouseenter', function() {
+      this.style.backgroundColor = 'rgba(255,255,255,0.3)';
+    });
+    closeButton.addEventListener('mouseleave', function() {
+      this.style.backgroundColor = 'rgba(255,255,255,0.2)';
+    });
+
+    sendButton.addEventListener('mouseenter', function() {
+      this.style.backgroundColor = adjustColor(config.primaryColor, -10);
+    });
+    sendButton.addEventListener('mouseleave', function() {
+      this.style.backgroundColor = config.primaryColor;
+    });
+
+    inputBox.addEventListener('focus', function() {
+      this.style.borderColor = config.primaryColor;
+    });
+    inputBox.addEventListener('blur', function() {
+      this.style.borderColor = '#e9ecef';
+    });
+
     // Add welcome message
-    addMessage('assistant', 'Hi! 👋 I\'m your AI support assistant. How can I help you today?');
+    addMessage('assistant', config.welcomeMessage);
+  }
+
+  function setupAutoOpen() {
+    if (config.autoOpenDelay > 0) {
+      autoOpenTimer = setTimeout(() => {
+        if (!isOpen) {
+          toggleChat();
+        }
+      }, config.autoOpenDelay * 1000);
+    }
   }
 
   function toggleChat() {
@@ -170,6 +250,11 @@
     
     if (isOpen) {
       inputBox.focus();
+      // Clear auto-open timer if chat is opened manually
+      if (autoOpenTimer) {
+        clearTimeout(autoOpenTimer);
+        autoOpenTimer = null;
+      }
     }
   }
 
@@ -181,9 +266,8 @@
 
   function addMessage(role, content) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `ai-support-message ai-support-message-${role}`;
+    messageDiv.className = `ai-assistant-message ai-assistant-message-${role}`;
     messageDiv.style.cssText = `
-      margin-bottom: 12px;
       display: flex;
       ${role === 'user' ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}
     `;
@@ -195,15 +279,16 @@
       border-radius: 12px;
       font-size: 14px;
       line-height: 1.4;
+      word-wrap: break-word;
       ${role === 'user' 
-        ? `background: ${config.themeColor}; color: white; border-bottom-right-radius: 4px;`
+        ? `background: ${config.primaryColor}; color: white; border-bottom-right-radius: 4px;`
         : 'background: white; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'
       }
     `;
     messageContent.textContent = content;
 
     messageDiv.appendChild(messageContent);
-    messageList.appendChild(messageContent);
+    messageList.appendChild(messageDiv);
     messageList.scrollTop = messageList.scrollHeight;
 
     messages.push({ role, content });
@@ -211,11 +296,10 @@
 
   function showTyping() {
     const typingDiv = document.createElement('div');
-    typingDiv.className = 'ai-support-typing';
+    typingDiv.className = 'ai-assistant-typing';
     typingDiv.style.cssText = `
       display: flex;
       justify-content: flex-start;
-      margin-bottom: 12px;
     `;
 
     const typingContent = document.createElement('div');
@@ -226,6 +310,7 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       display: flex;
       gap: 4px;
+      align-items: center;
     `;
 
     for (let i = 0; i < 3; i++) {
@@ -235,7 +320,7 @@
         height: 8px;
         background: #999;
         border-radius: 50%;
-        animation: typing 1.4s infinite;
+        animation: ai-typing 1.4s infinite;
         animation-delay: ${i * 0.2}s;
       `;
       typingContent.appendChild(dot);
@@ -267,7 +352,7 @@
 
     try {
       // Send to app proxy
-      const response = await fetch(`${config.apiUrl}/aibot/chat?shop=${config.shop}&timestamp=${Date.now()}&signature=${await generateSignature()}`, {
+      const response = await fetch(`/apps/aibot/chat?shop=${config.shop}&timestamp=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,27 +372,21 @@
         addMessage('assistant', data.reply);
         if (data.conversationId) {
           conversationId = data.conversationId;
-          localStorage.setItem('ai_support_conversation_id', conversationId);
+          localStorage.setItem('ai_assistant_conversation_id', conversationId);
         }
       } else {
         addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
       }
 
     } catch (error) {
-      console.error('Chat error:', error);
+      console.error('AI Assistant Chat error:', error);
       removeTyping(typingElement);
       addMessage('assistant', 'Sorry, I\'m having trouble connecting. Please try again in a moment.');
     }
   }
 
-  async function generateSignature() {
-    // In a real implementation, you would generate a proper HMAC signature
-    // For now, we'll use a simple approach (in production, use proper signature)
-    return btoa(`${config.shop}_${Date.now()}`);
-  }
-
   function loadConversationId() {
-    conversationId = localStorage.getItem('ai_support_conversation_id');
+    conversationId = localStorage.getItem('ai_assistant_conversation_id');
   }
 
   function adjustColor(color, amount) {
@@ -322,36 +401,63 @@
   }
 
   // Add CSS for typing animation
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes typing {
-      0%, 60%, 100% {
-        transform: translateY(0);
-        opacity: 0.7;
+  if (!document.getElementById('ai-assistant-styles')) {
+    const style = document.createElement('style');
+    style.id = 'ai-assistant-styles';
+    style.textContent = `
+      @keyframes ai-typing {
+        0%, 60%, 100% {
+          transform: translateY(0);
+          opacity: 0.7;
+        }
+        30% {
+          transform: translateY(-10px);
+          opacity: 1;
+        }
       }
-      30% {
-        transform: translateY(-10px);
-        opacity: 1;
+      
+      .ai-assistant-messages::-webkit-scrollbar {
+        width: 6px;
       }
+      
+      .ai-assistant-messages::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      .ai-assistant-messages::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 3px;
+      }
+      
+      .ai-assistant-messages::-webkit-scrollbar-thumb:hover {
+        background: #bbb;
+      }
+
+      /* Mobile responsiveness */
+      @media (max-width: 768px) {
+        .ai-assistant-window {
+          width: calc(100vw - 40px) !important;
+          height: calc(100vh - 120px) !important;
+          right: 20px !important;
+          left: 20px !important;
+          bottom: 100px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.AIAssistantWidget) {
+        window.AIAssistantWidget.init();
+      }
+    });
+  } else {
+    if (window.AIAssistantWidget) {
+      window.AIAssistantWidget.init();
     }
-    
-    .ai-support-bubble:hover {
-      transform: scale(1.1) !important;
-    }
-    
-    .ai-support-messages::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    .ai-support-messages::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    .ai-support-messages::-webkit-scrollbar-thumb {
-      background: #ddd;
-      border-radius: 3px;
-    }
-  `;
-  document.head.appendChild(style);
+  }
 
 })();

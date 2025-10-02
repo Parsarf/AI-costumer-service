@@ -11,9 +11,19 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "migrate": "node migrations/run.js",
+    "migrate:status": "node migrations/run.js status",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix"
+    "lint:fix": "eslint . --ext .js --fix",
+    "docker:build": "docker build -t shopify-ai-support-bot .",
+    "docker:run": "docker run -p 3001:3001 --env-file .env shopify-ai-support-bot",
+    "docker:compose:up": "docker-compose up -d",
+    "docker:compose:down": "docker-compose down",
+    "docker:compose:logs": "docker-compose logs -f",
+    "encrypt:migrate": "node -e \"require('./src/services/encryptedStoreService').migrateToEncryption().then(() => process.exit(0)).catch(() => process.exit(1))\""
   },
   "keywords": ["shopify", "ai", "customer-support", "claude", "app"],
   "author": "Parsarf",
@@ -42,7 +52,21 @@
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
     "supertest": "^6.3.3",
-    "eslint": "^8.55.0"
+    "eslint": "^8.55.0",
+    "@types/jest": "^29.5.8"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "testMatch": ["**/tests/**/*.test.js"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.test.js",
+      "!src/migrations/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "testTimeout": 10000
   },
   "engines": {
     "node": ">=18.0.0"

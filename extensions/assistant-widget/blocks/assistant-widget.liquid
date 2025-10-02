@@ -1,42 +1,41 @@
 {% comment %}
-  AI Support Assistant Widget Block
+  AI Assistant Widget Block
   This block adds a floating chat widget to the storefront
+  Configured via Theme Editor settings
 {% endcomment %}
 
-<div id="ai-support-widget" 
+<div id="ai-assistant-root" 
      data-shop="{{ shop.permanent_domain }}"
      data-api-url="{{ app.api_url }}"
-     data-theme-color="{{ block.settings.primary_color | default: '#4F46E5' }}"
-     data-position="{{ block.settings.position | default: 'bottom-right' }}">
+     data-welcome-message="{{ block.settings.welcome_message | escape }}"
+     data-primary-color="{{ block.settings.primary_color | default: '#4F46E5' }}"
+     data-position="{{ block.settings.position | default: 'bottom-right' }}"
+     data-show-mobile="{{ block.settings.show_on_mobile | default: true }}"
+     data-auto-open="{{ block.settings.auto_open_delay | default: 0 }}"
+     style="display: none;">
 </div>
 
+{% comment %} Load widget styles {% endcomment %}
+{{ 'assistant-widget.css' | asset_url | stylesheet_tag }}
+
+{% comment %} Load widget JavaScript {% endcomment %}
 <script>
   (function() {
-    const widget = document.getElementById('ai-support-widget');
-    const shop = widget.dataset.shop;
-    const apiUrl = widget.dataset.apiUrl;
-    const themeColor = widget.dataset.themeColor;
-    const position = widget.dataset.position;
+    // Only load if not already loaded
+    if (window.AIAssistantLoaded) return;
+    window.AIAssistantLoaded = true;
     
-    // Load widget styles
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = '{{ "assistant-widget.css" | asset_url }}';
-    document.head.appendChild(link);
-    
-    // Load widget script
     const script = document.createElement('script');
     script.src = '{{ "assistant-widget.js" | asset_url }}';
+    script.defer = true;
     script.async = true;
     script.onload = function() {
-      if (window.AISupportWidget) {
-        window.AISupportWidget.init({
-          shop: shop,
-          apiUrl: apiUrl,
-          themeColor: themeColor,
-          position: position
-        });
+      if (window.AIAssistantWidget) {
+        window.AIAssistantWidget.init();
       }
+    };
+    script.onerror = function() {
+      console.error('Failed to load AI Assistant Widget');
     };
     document.head.appendChild(script);
   })();
@@ -44,14 +43,22 @@
 
 {% schema %}
 {
-  "name": "AI Support Assistant",
+  "name": "AI Assistant Widget",
   "target": "head",
   "settings": [
     {
+      "type": "text",
+      "id": "welcome_message",
+      "label": "Welcome Message",
+      "default": "Hi! How can I help you today?",
+      "info": "The first message customers see when they open the chat"
+    },
+    {
       "type": "color",
       "id": "primary_color",
-      "label": "Primary Color",
-      "default": "#4F46E5"
+      "label": "Widget Color",
+      "default": "#4F46E5",
+      "info": "Choose the primary color for the chat widget"
     },
     {
       "type": "select",
@@ -67,7 +74,25 @@
           "label": "Bottom Left"
         }
       ],
-      "default": "bottom-right"
+      "default": "bottom-right",
+      "info": "Choose where to display the chat widget on your store"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_mobile",
+      "label": "Show on Mobile",
+      "default": true,
+      "info": "Display the chat widget on mobile devices"
+    },
+    {
+      "type": "range",
+      "id": "auto_open_delay",
+      "label": "Auto-open Delay (seconds)",
+      "min": 0,
+      "max": 60,
+      "step": 5,
+      "default": 0,
+      "info": "Automatically open chat after this many seconds (0 = disabled)"
     }
   ]
 }

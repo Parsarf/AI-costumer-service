@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Support Bot - Admin</title>
+    
+    <!-- Shopify App Bridge -->
+    <script src="https://unpkg.com/@shopify/app-bridge@4"></script>
+    <script src="https://unpkg.com/@shopify/app-bridge-react@4"></script>
+    
+    <!-- Polaris CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@12/build/esm/styles.css" />
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .error {
+            padding: 20px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            color: #dc2626;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">Loading AI Support Bot...</div>
+    </div>
+
+    <script>
+        // Initialize App Bridge
+        const { createApp } = window['@shopify/app-bridge'];
+        const { AppProvider, Page, Card, Button, Text, TextField, Select, Checkbox, Range, Banner, Spinner, Layout, Stack } = window['@shopify/polaris'];
+        const React = window.React;
+        const ReactDOM = window.ReactDOM;
+
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const shop = urlParams.get('shop');
+        const host = urlParams.get('host') || 'admin.shopify.com';
+        const billing = urlParams.get('billing');
+
+        if (!shop) {
+            document.getElementById('app').innerHTML = '<div class="error">Error: Missing shop parameter</div>';
+            throw new Error('Missing shop parameter');
+        }
+
+        // Create App Bridge app
+        const app = createApp({
+            apiKey: 'SHOPIFY_API_KEY_PLACEHOLDER', // Will be replaced by server
+            shop: shop,
+            host: host
+        });
+
+        // Main App Component
+        function App() {
+            const [loading, setLoading] = React.useState(true);
+            const [error, setError] = React.useState(null);
+            const [settings, setSettings] = React.useState({
+                welcomeMessage: 'Hi! How can I help you today?',
+                returnPolicy: 'Please contact support for return information.',
+                shippingPolicy: 'Please contact support for shipping information.',
+                supportEmail: 'support@store.com',
+                botPersonality: 'friendly',
+                primaryColor: '#4F46E5'
+            });
+            const [billingStatus, setBillingStatus] = React.useState({
+                hasAccess: false,
+                plan: 'free',
+                status: 'inactive'
+            });
+            const [analytics, setAnalytics] = React.useState({
+                totalConversations: 0,
+                escalatedConversations: 0,
+                averageResponseTime: 0
+            });
+            const [saving, setSaving] = React.useState(false);
+            const [billingLoading, setBillingLoading] = React.useState(false);
+
+            // Load initial data
+            React.useEffect(() => {
+                loadData();
+            }, []);
+
+            // Show billing success/error messages
+            React.useEffect(() => {
+                if (billing === 'success') {
+                    showToast('Subscription activated successfully!', 'success');
+                } else if (billing === 'error') {
+                    showToast('Billing setup failed. Please try again.', 'error');
+                }
+            }, [billing]);
+
+            async function loadData() {
+                try {
+                    setLoading(true);
+                    
+                    // Load settings
+                    const settingsResponse = await fetch(`/api/settings?shop=${shop}`);
+                    if (settingsResponse.ok) {
+                        const settingsData = await settingsResponse.json();
+                        if (settingsData.settings) {
+                            setSettings(settingsData.settings);
+                        }
+                    }
+
+                    // Load billing status
+                    const billingResponse = await fetch(`/billing/status?shop=${shop}`);
+                    if (billingResponse.ok) {
+                        const billingData = await billingResponse.json();
+                        setBillingStatus(billingData);
+                    }
+
+                    // Load analytics
+                    const analyticsResponse = await fetch(`/api/analytics?shop=${shop}`);
+                    if (analyticsResponse.ok) {
+                        const analyticsData = await analyticsResponse.json();
+                        setAnalytics(analyticsData);
+                    }
+
+                } catch (err) {
+                    console.error('Error loading data:', err);
+                    setError('Failed to load app data');
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            async function saveSettings() {
+                try {
+                    setSaving(true);
+                    
+                    const response = await fetch(`/api/settings?shop=${shop}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ settings })
+                    });
+
+                    if (response.ok) {
+                        showToast('Settings saved successfully!', 'success');
+                    } else {
+                        throw new Error('Failed to save settings');
+                    }
+
+                } catch (err) {
+                    console.error('Error saving settings:', err);
+                    showToast('Failed to save settings', 'error');
+                } finally {
+                    setSaving(false);
+                }
+            }
+
+            async function createSubscription(plan = 'starter') {
+                try {
+                    setBillingLoading(true);
+                    
+                    const response = await fetch(`/billing/create?shop=${shop}&plan=${plan}`, {
+                        method: 'POST'
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.confirmationUrl) {
+                        // Redirect to Shopify billing approval
+                        window.location.href = data.confirmationUrl;
+                    } else {
+                        throw new Error(data.error || 'Failed to create subscription');
+                    }
+
+                } catch (err) {
+                    console.error('Error creating subscription:', err);
+                    showToast('Failed to create subscription', 'error');
+                } finally {
+                    setBillingLoading(false);
+                }
+            }
+
+            async function cancelSubscription() {
+                if (!confirm('Are you sure you want to cancel your subscription?')) {
+                    return;
+                }
+
+                try {
+                    setBillingLoading(true);
+                    
+                    const response = await fetch(`/billing/cancel?shop=${shop}`, {
+                        method: 'POST'
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showToast('Subscription cancelled successfully', 'success');
+                        loadData(); // Reload data
+                    } else {
+                        throw new Error(data.error || 'Failed to cancel subscription');
+                    }
+
+                } catch (err) {
+                    console.error('Error cancelling subscription:', err);
+                    showToast('Failed to cancel subscription', 'error');
+                } finally {
+                    setBillingLoading(false);
+                }
+            }
+
+            function showToast(message, type = 'info') {
+                // Simple toast implementation
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 12px 20px;
+                    border-radius: 6px;
+                    color: white;
+                    font-weight: 500;
+                    z-index: 1000;
+                    background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 3000);
+            }
+
+            if (loading) {
+                return React.createElement('div', { className: 'loading' },
+                    React.createElement(Spinner, { size: 'large' }),
+                    React.createElement('div', { style: { marginTop: '16px' } }, 'Loading...')
+                );
+            }
+
+            if (error) {
+                return React.createElement('div', { className: 'error' }, error);
+            }
+
+            return React.createElement(AppProvider, { i18n: {} },
+                React.createElement(Page, { 
+                    title: 'AI Support Bot',
+                    subtitle: 'Configure your AI-powered customer support'
+                },
+                    React.createElement(Layout, {},
+                        // Billing Status Card
+                        React.createElement(Layout.Section, {},
+                            React.createElement(Card, { sectioned: true },
+                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
+                                    React.createElement(Text, { variant: 'headingMd' }, 'Billing Status'),
+                                    React.createElement(Stack, { vertical: true, spacing: 'tight' },
+                                        React.createElement(Text, { variant: 'bodyMd' }, 
+                                            `Plan: ${billingStatus.plan} (${billingStatus.status})`
+                                        ),
+                                        React.createElement(Text, { variant: 'bodyMd' }, 
+                                            `Access: ${billingStatus.hasAccess ? 'Active' : 'Inactive'}`
+                                        ),
+                                        billingStatus.trialEndsAt && React.createElement(Text, { variant: 'bodyMd' }, 
+                                            `Trial ends: ${new Date(billingStatus.trialEndsAt).toLocaleDateString()}`
+                                        )
+                                    ),
+                                    React.createElement(Stack, { spacing: 'tight' },
+                                        !billingStatus.hasAccess ? 
+                                            React.createElement(Button, { 
+                                                primary: true, 
+                                                loading: billingLoading,
+                                                onClick: () => createSubscription('starter')
+                                            }, 'Subscribe Now') :
+                                            React.createElement(Button, { 
+                                                destructive: true, 
+                                                loading: billingLoading,
+                                                onClick: cancelSubscription
+                                            }, 'Cancel Subscription')
+                                    )
+                                )
+                            )
+                        ),
+
+                        // Settings Card
+                        React.createElement(Layout.Section, {},
+                            React.createElement(Card, { sectioned: true },
+                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
+                                    React.createElement(Text, { variant: 'headingMd' }, 'Bot Settings'),
+                                    
+                                    React.createElement(TextField, {
+                                        label: 'Welcome Message',
+                                        value: settings.welcomeMessage,
+                                        onChange: (value) => setSettings({...settings, welcomeMessage: value}),
+                                        multiline: 2,
+                                        helpText: 'The first message customers see when they open the chat'
+                                    }),
+
+                                    React.createElement(TextField, {
+                                        label: 'Return Policy',
+                                        value: settings.returnPolicy,
+                                        onChange: (value) => setSettings({...settings, returnPolicy: value}),
+                                        multiline: 3,
+                                        helpText: 'Your store\'s return policy information'
+                                    }),
+
+                                    React.createElement(TextField, {
+                                        label: 'Shipping Policy',
+                                        value: settings.shippingPolicy,
+                                        onChange: (value) => setSettings({...settings, shippingPolicy: value}),
+                                        multiline: 3,
+                                        helpText: 'Your store\'s shipping policy information'
+                                    }),
+
+                                    React.createElement(TextField, {
+                                        label: 'Support Email',
+                                        value: settings.supportEmail,
+                                        onChange: (value) => setSettings({...settings, supportEmail: value}),
+                                        type: 'email',
+                                        helpText: 'Email address for customer support'
+                                    }),
+
+                                    React.createElement(Select, {
+                                        label: 'Bot Personality',
+                                        options: [
+                                            { label: 'Friendly', value: 'friendly' },
+                                            { label: 'Professional', value: 'professional' },
+                                            { label: 'Efficient', value: 'efficient' }
+                                        ],
+                                        value: settings.botPersonality,
+                                        onChange: (value) => setSettings({...settings, botPersonality: value})
+                                    }),
+
+                                    React.createElement(TextField, {
+                                        label: 'Widget Color',
+                                        value: settings.primaryColor,
+                                        onChange: (value) => setSettings({...settings, primaryColor: value}),
+                                        type: 'color',
+                                        helpText: 'Primary color for the chat widget'
+                                    }),
+
+                                    React.createElement(Button, {
+                                        primary: true,
+                                        loading: saving,
+                                        onClick: saveSettings
+                                    }, 'Save Settings')
+                                )
+                            )
+                        ),
+
+                        // Analytics Card
+                        React.createElement(Layout.Section, {},
+                            React.createElement(Card, { sectioned: true },
+                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
+                                    React.createElement(Text, { variant: 'headingMd' }, 'Analytics'),
+                                    
+                                    React.createElement(Stack, { spacing: 'loose' },
+                                        React.createElement(Stack, { vertical: true, spacing: 'tight' },
+                                            React.createElement(Text, { variant: 'bodyMd' }, 'Total Conversations'),
+                                            React.createElement(Text, { variant: 'headingLg' }, analytics.totalConversations)
+                                        ),
+                                        React.createElement(Stack, { vertical: true, spacing: 'tight' },
+                                            React.createElement(Text, { variant: 'bodyMd' }, 'Escalated'),
+                                            React.createElement(Text, { variant: 'headingLg' }, analytics.escalatedConversations)
+                                        ),
+                                        React.createElement(Stack, { vertical: true, spacing: 'tight' },
+                                            React.createElement(Text, { variant: 'bodyMd' }, 'Avg Response Time'),
+                                            React.createElement(Text, { variant: 'headingLg' }, `${analytics.averageResponseTime}s`)
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+
+                        // Instructions Card
+                        React.createElement(Layout.Section, {},
+                            React.createElement(Card, { sectioned: true },
+                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
+                                    React.createElement(Text, { variant: 'headingMd' }, 'Setup Instructions'),
+                                    
+                                    React.createElement(Stack, { vertical: true, spacing: 'tight' },
+                                        React.createElement(Text, { variant: 'bodyMd' }, 
+                                            '1. Go to Online Store → Themes'
+                                        ),
+                                        React.createElement(Text, { variant: 'bodyMd' }, 
+                                            '2. Click Customize on your active theme'
+                                        ),
+                                        React.createElement(Text, { variant: 'bodyMd' }, 
+                                            '3. Go to App embeds section'
+                                        ),
+                                        React.createElement(Text, { variant: 'bodyMd' }, 
+                                            '4. Enable "AI Assistant Widget"'
+                                        ),
+                                        React.createElement(Text, { variant: 'bodyMd' }, 
+                                            '5. Configure widget settings and save'
+                                        )
+                                    ),
+
+                                    React.createElement(Banner, {
+                                        title: 'Widget is now active!',
+                                        status: 'success'
+                                    }, 'Your AI support bot is ready to help customers on your store.')
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        // Render the app
+        ReactDOM.render(React.createElement(App), document.getElementById('app'));
+    </script>
+</body>
+</html>
+

@@ -1,7 +1,7 @@
-const { shopify } = require('../config/shopify');
-const Store = require('../models/Store');
-const { installScriptTag, getShopInfo } = require('../services/shopifyService');
-const { sendWelcomeEmail } = require('../utils/emailSender');
+const { shopify } = require('../lib/shopify');
+const prisma = require('../lib/prisma');
+const { getShopInfo } = require('../services/shopifyService');
+const { registerWebhooks } = require('../utils/webhookRegistration');
 const logger = require('../utils/logger');
 
 /**
@@ -85,40 +85,43 @@ async function handleCallback(req, res) {
     const shopInfo = await getShopInfo(shop, access_token);
 
     // Create or update store in database
-    const [store, created] = await Store.upsert({
-      shop,
-      accessToken: access_token,
-      storeName: shopInfo?.name || shop.split('.')[0],
-      active: true,
-      subscriptionStatus: 'trial'
-    }, {
-      returning: true
+    const store = await prisma.shop.upsert({
+      where: { shop },
+      update: {
+        accessToken: access_token,
+        isActive: true,
+        updatedAt: new Date()
+      },
+      create: {
+        shop,
+        accessToken: access_token,
+        isActive: true,
+        plan: 'free',
+        settings: {
+          storeName: shopInfo?.name || shop.split('.')[0],
+          welcomeMessage: 'Hi! How can I help you today?',
+          returnPolicy: 'Please contact support for return information.',
+          shippingPolicy: 'Please contact support for shipping information.',
+          supportEmail: 'support@store.com',
+          botPersonality: 'friendly'
+        }
+      }
     });
 
-    logger.info(created ? 'New store created' : 'Store updated', { 
+    logger.info('Store created/updated', { 
       shop,
       storeId: store.id 
     });
 
-    // Install script tag on the store
-    try {
-      await installScriptTag(shop, access_token);
-      logger.info('Script tag installed successfully', { shop });
-    } catch (error) {
-      logger.error('Failed to install script tag:', error);
-      // Don't fail the installation if script tag fails
-    }
+    // Register webhooks (async, don't wait)
+    registerWebhooks(shop, access_token).catch(err => 
+      logger.error('Failed to register webhooks:', err)
+    );
 
-    // Send welcome email (async, don't wait)
-    if (created) {
-      sendWelcomeEmail(store).catch(err => 
-        logger.error('Failed to send welcome email:', err)
-      );
-    }
-
-    // Redirect to success page or dashboard
-    const redirectUrl = `${process.env.APP_URL}/dashboard?shop=${shop}&installed=true`;
+    // Redirect to embedded app
+    res.redirect(`/app?shop=${shop}&host=${req.query.host || 'admin.shopify.com'}`);
     
+    // Fallback success page (if redirect fails)
     res.send(`
       <!DOCTYPE html>
       <html>
@@ -242,7 +245,9 @@ async function verifyAuth(req, res) {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
-    const store = await Store.findOne({ where: { shop, active: true } });
+    const store = await prisma.shop.findUnique({ 
+      where: { shop, isActive: true } 
+    });
 
     if (!store) {
       return res.json({ authenticated: false });
@@ -251,7 +256,7 @@ async function verifyAuth(req, res) {
     res.json({ 
       authenticated: true,
       shop: store.shop,
-      storeName: store.storeName
+      storeName: store.settings?.storeName || store.shop.split('.')[0]
     });
   } catch (error) {
     logger.error('Error verifying auth:', error);

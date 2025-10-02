@@ -1,5 +1,6 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
+const { validateInput, validateSettings } = require('../middleware/validateInput');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -37,7 +38,7 @@ router.get('/', async (req, res) => {
 });
 
 // Update shop settings
-router.put('/', async (req, res) => {
+router.put('/', validateInput, async (req, res) => {
   try {
     const { shop } = req.query;
     const { settings } = req.body;
@@ -48,6 +49,15 @@ router.put('/', async (req, res) => {
 
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({ error: 'Invalid settings format' });
+    }
+
+    // Validate settings object
+    const validation = validateSettings(settings);
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        error: 'Invalid settings', 
+        details: validation.errors 
+      });
     }
 
     const updatedShop = await prisma.shop.update({

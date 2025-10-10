@@ -12,7 +12,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "build-extension": "react-scripts build && npm run copy-to-extension",
-    "copy-to-extension": "cp build/static/js/*.js ../extensions/assistant-widget/assets/assistant-widget.js && cp build/static/css/*.css ../extensions/assistant-widget/assets/assistant-widget.css",
+    "copy-to-extension": "node scripts/copy-to-extension.js",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

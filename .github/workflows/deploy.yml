@@ -7,8 +7,49 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Install widget dependencies
+        run: |
+          cd chat-widget
+          npm ci
+
+      - name: Build chat widget
+        run: |
+          cd chat-widget
+          npm run build
+
+      - name: Generate Prisma client
+        run: |
+          cd backend
+          npx prisma generate
+
+      - name: Run tests
+        run: |
+          cd backend
+          npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     
     steps:
       - name: Checkout code
@@ -26,10 +67,11 @@ jobs:
           cd backend
           npm ci
 
-      - name: Run tests
+      - name: Build chat widget
         run: |
-          cd backend
-          npm test
+          cd chat-widget
+          npm ci
+          npm run build
 
       - name: Generate Prisma client
         run: |
@@ -37,8 +79,13 @@ jobs:
           npx prisma generate
 
       - name: Deploy to Railway
-        if: github.ref == 'refs/heads/main'
         uses: railwayapp/railway-deploy@v1
         with:
           railway-token: ${{ secrets.RAILWAY_TOKEN }}
           service: backend
+
+      - name: Run database migrations
+        run: |
+          railway run npx prisma migrate deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

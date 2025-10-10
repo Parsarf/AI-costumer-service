@@ -11,20 +11,26 @@ datasource db {
 }
 
 model Shop {
-  id           String   @id @default(cuid())
-  shop         String   @unique
-  accessToken  String
-  installedAt  DateTime @default(now())
-  plan         String   @default("free")
-  settings     Json?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                    Int      @id @default(autoincrement())
+  shop                  String   @unique
+  accessToken           String
+  storeName             String?
+  settings              Json?    @default("{\"welcomeMessage\":\"Hi! 👋 I'm here to help you with any questions about your order, returns, or our products. How can I assist you today?\",\"returnPolicy\":\"We accept returns within 30 days of purchase. Items must be unworn and in original packaging.\",\"shippingPolicy\":\"We ship within 1-2 business days. Domestic orders typically arrive in 3-5 business days.\",\"supportEmail\":\"support@example.com\",\"botPersonality\":\"friendly\",\"chatbotEnabled\":true,\"theme\":{\"primaryColor\":\"#4F46E5\",\"position\":\"bottom-right\"}}")
+  active                Boolean  @default(true)
+  subscriptionTier      String   @default("starter")
+  subscriptionStatus    String   @default("trial")
+  chargeId              String?
+  conversationCount     Int      @default(0)
+  conversationLimit     Int      @default(1000)
+  installedAt           DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
   
   conversations Conversation[]
   sessions      Session[]
+  billingSubscription BillingSubscription?
   
-  @@map("shops")
+  @@map("stores")
 }
 
 model Session {
@@ -37,31 +43,55 @@ model Session {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  shopId String
-  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+  shopRelation Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   
   @@map("sessions")
 }
 
 model Conversation {
-  id        String   @id @default(cuid())
-  shop      String
-  userId    String?
-  prompt    String
-  reply     String?
-  metadata  Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String    @id @default(cuid())
+  shopId            Int
+  customerEmail     String?
+  customerName      String?
+  customerId        String?
+  status            String    @default("active")
+  escalated         Boolean   @default(false)
+  escalationReason  String?
+  metadata          Json      @default("{}")
+  messageCount      Int       @default(0)
+  lastMessageAt     DateTime  @default(now())
+  resolvedAt        DateTime?
+  sessionId         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   
-  shopId String
-  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  messages  Message[]
   
   @@map("conversations")
 }
 
+model Message {
+  id              Int      @id @default(autoincrement())
+  conversationId  String
+  role            String
+  content         String
+  metadata        Json     @default("{}")
+  tokens          Int?
+  responseTime    Int?
+  claudeModel     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
 model BillingSubscription {
   id                String   @id @default(cuid())
-  shopId            String   @unique
+  shopId            Int      @unique
   subscriptionId    String   @unique
   planName          String
   price             Float
@@ -72,6 +102,8 @@ model BillingSubscription {
   currentPeriodEnd  DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   
   @@map("billing_subscriptions")
 }

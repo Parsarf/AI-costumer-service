@@ -6,11 +6,10 @@
     <title>AI Support Bot - Admin</title>
     
     <!-- Shopify App Bridge -->
-    <script src="https://unpkg.com/@shopify/app-bridge@4"></script>
-    <script src="https://unpkg.com/@shopify/app-bridge-react@4"></script>
+    <script src="https://unpkg.com/@shopify/app-bridge@3.7.9/umd/index.js"></script>
     
     <!-- Polaris CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@12/build/esm/styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@11.0.0/build/esm/styles.css" />
     
     <!-- React -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -49,10 +48,166 @@
 
     <script>
         // Initialize App Bridge
-        const { createApp } = window['@shopify/app-bridge'];
-        const { AppProvider, Page, Card, Button, Text, TextField, Select, Checkbox, Range, Banner, Spinner, Layout, Stack } = window['@shopify/polaris'];
+        const { createApp } = window['AppBridge'];
         const React = window.React;
         const ReactDOM = window.ReactDOM;
+        
+        // Simple UI components since Polaris isn't loading properly
+        const Button = ({ children, onClick, primary, loading, destructive, ...props }) => {
+            const style = {
+                padding: '8px 16px',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                backgroundColor: primary ? '#4F46E5' : destructive ? '#ef4444' : '#f3f4f6',
+                color: primary || destructive ? 'white' : '#374151',
+                opacity: loading ? 0.6 : 1
+            };
+            return React.createElement('button', { style, onClick, disabled: loading, ...props }, children);
+        };
+        
+        const Card = ({ children, sectioned, ...props }) => {
+            const style = {
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: sectioned ? '20px' : '0',
+                marginBottom: '16px'
+            };
+            return React.createElement('div', { style, ...props }, children);
+        };
+        
+        const Text = ({ children, variant, ...props }) => {
+            const style = {
+                fontSize: variant === 'headingMd' ? '18px' : variant === 'headingLg' ? '24px' : '14px',
+                fontWeight: variant === 'headingMd' || variant === 'headingLg' ? '600' : '400',
+                color: '#374151',
+                margin: '0 0 8px 0'
+            };
+            return React.createElement('div', { style, ...props }, children);
+        };
+        
+        const TextField = ({ label, value, onChange, multiline, type, helpText, ...props }) => {
+            const inputStyle = {
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '14px',
+                marginTop: '4px'
+            };
+            const labelStyle = {
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                marginBottom: '4px'
+            };
+            const helpStyle = {
+                fontSize: '12px',
+                color: '#6b7280',
+                marginTop: '4px'
+            };
+            
+            return React.createElement('div', { style: { marginBottom: '16px' } },
+                React.createElement('label', { style: labelStyle }, label),
+                multiline ? 
+                    React.createElement('textarea', { style: inputStyle, value, onChange: (e) => onChange(e.target.value), rows: multiline, ...props }) :
+                    React.createElement('input', { style: inputStyle, value, onChange: (e) => onChange(e.target.value), type, ...props }),
+                helpText && React.createElement('div', { style: helpStyle }, helpText)
+            );
+        };
+        
+        const Select = ({ label, options, value, onChange, ...props }) => {
+            const selectStyle = {
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '14px',
+                marginTop: '4px'
+            };
+            const labelStyle = {
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                marginBottom: '4px'
+            };
+            
+            return React.createElement('div', { style: { marginBottom: '16px' } },
+                React.createElement('label', { style: labelStyle }, label),
+                React.createElement('select', { style: selectStyle, value, onChange: (e) => onChange(e.target.value), ...props },
+                    options.map(option => React.createElement('option', { key: option.value, value: option.value }, option.label))
+                )
+            );
+        };
+        
+        const Banner = ({ children, title, status, ...props }) => {
+            const style = {
+                padding: '12px 16px',
+                borderRadius: '4px',
+                marginBottom: '16px',
+                backgroundColor: status === 'success' ? '#f0fdf4' : '#fef2f2',
+                border: `1px solid ${status === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                color: status === 'success' ? '#166534' : '#dc2626'
+            };
+            return React.createElement('div', { style, ...props },
+                React.createElement('div', { style: { fontWeight: '600', marginBottom: '4px' } }, title),
+                children
+            );
+        };
+        
+        const Spinner = ({ size, ...props }) => {
+            const style = {
+                width: size === 'large' ? '32px' : '16px',
+                height: size === 'large' ? '32px' : '16px',
+                border: '2px solid #e5e7eb',
+                borderTop: '2px solid #4F46E5',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto'
+            };
+            return React.createElement('div', { style, ...props });
+        };
+        
+        const Layout = ({ children, ...props }) => {
+            return React.createElement('div', { style: { maxWidth: '800px', margin: '0 auto', padding: '20px' }, ...props }, children);
+        };
+        
+        const Stack = ({ children, vertical, spacing, ...props }) => {
+            const style = {
+                display: 'flex',
+                flexDirection: vertical ? 'column' : 'row',
+                gap: spacing === 'loose' ? '24px' : spacing === 'tight' ? '8px' : '16px',
+                alignItems: vertical ? 'stretch' : 'center'
+            };
+            return React.createElement('div', { style, ...props }, children);
+        };
+        
+        const Page = ({ children, title, subtitle, ...props }) => {
+            return React.createElement('div', { style: { marginBottom: '32px' } },
+                title && React.createElement('h1', { style: { fontSize: '28px', fontWeight: '600', margin: '0 0 8px 0', color: '#111827' } }, title),
+                subtitle && React.createElement('p', { style: { fontSize: '16px', color: '#6b7280', margin: '0 0 24px 0' } }, subtitle),
+                children
+            );
+        };
+        
+        const AppProvider = ({ children, i18n, ...props }) => {
+            return React.createElement('div', { ...props }, children);
+        };
+        
+        // Add CSS animation for spinner
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
 
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);

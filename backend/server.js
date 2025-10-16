@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const { shopify } = require('./src/lib/shopify');
 const prisma = require('./src/lib/prisma');
 const logger = require('./src/utils/logger');
+const { initializeDatabase } = require('./init-db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -230,6 +231,49 @@ app.get('/auth/callback', async (req, res) => {
   }
 });
 
+// Root route - redirect to app with shop parameter
+app.get('/', async (req, res) => {
+  try {
+    const { shop, host } = req.query;
+    
+    if (!shop) {
+      // If no shop parameter, show a simple message
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>AI Customer Service Bot</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .logo { font-size: 24px; color: #4F46E5; margin-bottom: 20px; }
+            .message { color: #666; margin-bottom: 30px; }
+            .status { background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="logo">🤖 AI Customer Service Bot</div>
+            <div class="message">This app is designed to work within Shopify stores.</div>
+            <div class="status">
+              <strong>Status:</strong> ✅ Backend running successfully<br>
+              <strong>Health:</strong> <a href="/health">Check health status</a>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    // Redirect to /app with shop parameter
+    const redirectUrl = `/app?shop=${encodeURIComponent(shop)}${host ? `&host=${encodeURIComponent(host)}` : ''}`;
+    res.redirect(redirectUrl);
+  } catch (error) {
+    logger.error('Root route error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Embedded app route
 app.get('/app', async (req, res) => {
   try {
@@ -313,10 +357,14 @@ async function startServer() {
     await prisma.$connect();
     logger.info('Database connected successfully');
     
+    // Initialize database tables
+    await initializeDatabase();
+    logger.info('Database tables initialized successfully');
+    
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Shopify AI Support Bot running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV}`);
-      logger.info(`App URL: ${process.env.APP_URL}`);
+      logger.info(`App URL: ${process.env.HOST || 'https://ai-customerservice-production.up.railway.app'}`);
     });
 
     // Graceful shutdown handling

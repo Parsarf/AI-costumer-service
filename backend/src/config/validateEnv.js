@@ -9,7 +9,8 @@ const REQUIRED_VARS = [
   'OPENAI_API_KEY',
   'DATABASE_URL',
   'APP_URL',
-  'ENCRYPTION_KEY'
+  'ENCRYPTION_KEY',
+  'SCOPES'
 ];
 
 /**

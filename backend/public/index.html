@@ -5,15 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Support Bot - Admin</title>
     
-    <!-- Shopify App Bridge -->
-    <script src="https://unpkg.com/@shopify/app-bridge@3.7.9/umd/index.js"></script>
-    
-    <!-- Polaris CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@11.0.0/build/esm/styles.css" />
-    
     <!-- React -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Simple CSS for styling -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f6f6f7;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #4F46E5;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .button:hover {
+            background: #4338CA;
+        }
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 4px;
+            resize: vertical;
+        }
+        .label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        .help-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        .success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+    </style>
     
     <style>
         body {
@@ -47,540 +119,192 @@
     </div>
 
     <script>
-        // Initialize App Bridge
-        const { createApp } = window['AppBridge'];
         const React = window.React;
         const ReactDOM = window.ReactDOM;
-        
-        // Simple UI components since Polaris isn't loading properly
-        const Button = ({ children, onClick, primary, loading, destructive, ...props }) => {
-            const style = {
-                padding: '8px 16px',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                backgroundColor: primary ? '#4F46E5' : destructive ? '#ef4444' : '#f3f4f6',
-                color: primary || destructive ? 'white' : '#374151',
-                opacity: loading ? 0.6 : 1
-            };
-            return React.createElement('button', { style, onClick, disabled: loading, ...props }, children);
-        };
-        
-        const Card = ({ children, sectioned, ...props }) => {
-            const style = {
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: sectioned ? '20px' : '0',
-                marginBottom: '16px'
-            };
-            return React.createElement('div', { style, ...props }, children);
-        };
-        
-        const Text = ({ children, variant, ...props }) => {
-            const style = {
-                fontSize: variant === 'headingMd' ? '18px' : variant === 'headingLg' ? '24px' : '14px',
-                fontWeight: variant === 'headingMd' || variant === 'headingLg' ? '600' : '400',
-                color: '#374151',
-                margin: '0 0 8px 0'
-            };
-            return React.createElement('div', { style, ...props }, children);
-        };
-        
-        const TextField = ({ label, value, onChange, multiline, type, helpText, ...props }) => {
-            const inputStyle = {
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '14px',
-                marginTop: '4px'
-            };
-            const labelStyle = {
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-            };
-            const helpStyle = {
-                fontSize: '12px',
-                color: '#6b7280',
-                marginTop: '4px'
-            };
-            
-            return React.createElement('div', { style: { marginBottom: '16px' } },
-                React.createElement('label', { style: labelStyle }, label),
-                multiline ? 
-                    React.createElement('textarea', { style: inputStyle, value, onChange: (e) => onChange(e.target.value), rows: multiline, ...props }) :
-                    React.createElement('input', { style: inputStyle, value, onChange: (e) => onChange(e.target.value), type, ...props }),
-                helpText && React.createElement('div', { style: helpStyle }, helpText)
-            );
-        };
-        
-        const Select = ({ label, options, value, onChange, ...props }) => {
-            const selectStyle = {
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '14px',
-                marginTop: '4px'
-            };
-            const labelStyle = {
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '4px'
-            };
-            
-            return React.createElement('div', { style: { marginBottom: '16px' } },
-                React.createElement('label', { style: labelStyle }, label),
-                React.createElement('select', { style: selectStyle, value, onChange: (e) => onChange(e.target.value), ...props },
-                    options.map(option => React.createElement('option', { key: option.value, value: option.value }, option.label))
-                )
-            );
-        };
-        
-        const Banner = ({ children, title, status, ...props }) => {
-            const style = {
-                padding: '12px 16px',
-                borderRadius: '4px',
-                marginBottom: '16px',
-                backgroundColor: status === 'success' ? '#f0fdf4' : '#fef2f2',
-                border: `1px solid ${status === 'success' ? '#bbf7d0' : '#fecaca'}`,
-                color: status === 'success' ? '#166534' : '#dc2626'
-            };
-            return React.createElement('div', { style, ...props },
-                React.createElement('div', { style: { fontWeight: '600', marginBottom: '4px' } }, title),
-                children
-            );
-        };
-        
-        const Spinner = ({ size, ...props }) => {
-            const style = {
-                width: size === 'large' ? '32px' : '16px',
-                height: size === 'large' ? '32px' : '16px',
-                border: '2px solid #e5e7eb',
-                borderTop: '2px solid #4F46E5',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto'
-            };
-            return React.createElement('div', { style, ...props });
-        };
-        
-        const Layout = ({ children, ...props }) => {
-            return React.createElement('div', { style: { maxWidth: '800px', margin: '0 auto', padding: '20px' }, ...props }, children);
-        };
-        
-        const Stack = ({ children, vertical, spacing, ...props }) => {
-            const style = {
-                display: 'flex',
-                flexDirection: vertical ? 'column' : 'row',
-                gap: spacing === 'loose' ? '24px' : spacing === 'tight' ? '8px' : '16px',
-                alignItems: vertical ? 'stretch' : 'center'
-            };
-            return React.createElement('div', { style, ...props }, children);
-        };
-        
-        const Page = ({ children, title, subtitle, ...props }) => {
-            return React.createElement('div', { style: { marginBottom: '32px' } },
-                title && React.createElement('h1', { style: { fontSize: '28px', fontWeight: '600', margin: '0 0 8px 0', color: '#111827' } }, title),
-                subtitle && React.createElement('p', { style: { fontSize: '16px', color: '#6b7280', margin: '0 0 24px 0' } }, subtitle),
-                children
-            );
-        };
-        
-        const AppProvider = ({ children, i18n, ...props }) => {
-            return React.createElement('div', { ...props }, children);
-        };
-        
-        // Add CSS animation for spinner
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
 
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const shop = urlParams.get('shop');
         const host = urlParams.get('host') || 'admin.shopify.com';
-        const billing = urlParams.get('billing');
 
         if (!shop) {
             document.getElementById('app').innerHTML = '<div class="error">Error: Missing shop parameter</div>';
-            throw new Error('Missing shop parameter');
-        }
+        } else {
+            // Simple App Component
+            function App() {
+                const [loading, setLoading] = React.useState(true);
+                const [settings, setSettings] = React.useState({
+                    welcomeMessage: 'Hi! How can I help you today?',
+                    returnPolicy: 'Please contact support for return information.',
+                    shippingPolicy: 'Please contact support for shipping information.',
+                    supportEmail: 'support@store.com',
+                    botPersonality: 'friendly',
+                    primaryColor: '#4F46E5'
+                });
+                const [saving, setSaving] = React.useState(false);
 
-        // Create App Bridge app
-        const app = createApp({
-            apiKey: 'SHOPIFY_API_KEY_PLACEHOLDER', // Will be replaced by server
-            shop: shop,
-            host: host
-        });
+                React.useEffect(() => {
+                    loadData();
+                }, []);
 
-        // Main App Component
-        function App() {
-            const [loading, setLoading] = React.useState(true);
-            const [error, setError] = React.useState(null);
-            const [settings, setSettings] = React.useState({
-                welcomeMessage: 'Hi! How can I help you today?',
-                returnPolicy: 'Please contact support for return information.',
-                shippingPolicy: 'Please contact support for shipping information.',
-                supportEmail: 'support@store.com',
-                botPersonality: 'friendly',
-                primaryColor: '#4F46E5'
-            });
-            const [billingStatus, setBillingStatus] = React.useState({
-                hasAccess: false,
-                plan: 'free',
-                status: 'inactive'
-            });
-            const [analytics, setAnalytics] = React.useState({
-                totalConversations: 0,
-                escalatedConversations: 0,
-                averageResponseTime: 0
-            });
-            const [saving, setSaving] = React.useState(false);
-            const [billingLoading, setBillingLoading] = React.useState(false);
-
-            // Load initial data
-            React.useEffect(() => {
-                loadData();
-            }, []);
-
-            // Show billing success/error messages
-            React.useEffect(() => {
-                if (billing === 'success') {
-                    showToast('Subscription activated successfully!', 'success');
-                } else if (billing === 'error') {
-                    showToast('Billing setup failed. Please try again.', 'error');
-                }
-            }, [billing]);
-
-            async function loadData() {
-                try {
-                    setLoading(true);
-                    
-                    // Load settings
-                    const settingsResponse = await fetch(`/api/settings?shop=${shop}`);
-                    if (settingsResponse.ok) {
-                        const settingsData = await settingsResponse.json();
-                        if (settingsData.settings) {
-                            setSettings(settingsData.settings);
+                async function loadData() {
+                    try {
+                        setLoading(true);
+                        
+                        // Load settings
+                        const response = await fetch(`/api/settings?shop=${shop}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.settings) {
+                                setSettings(data.settings);
+                            }
                         }
+                    } catch (err) {
+                        console.error('Error loading data:', err);
+                    } finally {
+                        setLoading(false);
                     }
-
-                    // Load billing status
-                    const billingResponse = await fetch(`/billing/status?shop=${shop}`);
-                    if (billingResponse.ok) {
-                        const billingData = await billingResponse.json();
-                        setBillingStatus(billingData);
-                    }
-
-                    // Load analytics
-                    const analyticsResponse = await fetch(`/api/analytics?shop=${shop}`);
-                    if (analyticsResponse.ok) {
-                        const analyticsData = await analyticsResponse.json();
-                        setAnalytics(analyticsData);
-                    }
-
-                } catch (err) {
-                    console.error('Error loading data:', err);
-                    setError('Failed to load app data');
-                } finally {
-                    setLoading(false);
-                }
-            }
-
-            async function saveSettings() {
-                try {
-                    setSaving(true);
-                    
-                    const response = await fetch(`/api/settings?shop=${shop}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ settings })
-                    });
-
-                    if (response.ok) {
-                        showToast('Settings saved successfully!', 'success');
-                    } else {
-                        throw new Error('Failed to save settings');
-                    }
-
-                } catch (err) {
-                    console.error('Error saving settings:', err);
-                    showToast('Failed to save settings', 'error');
-                } finally {
-                    setSaving(false);
-                }
-            }
-
-            async function createSubscription(plan = 'starter') {
-                try {
-                    setBillingLoading(true);
-                    
-                    const response = await fetch(`/billing/create?shop=${shop}&plan=${plan}`, {
-                        method: 'POST'
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.confirmationUrl) {
-                        // Redirect to Shopify billing approval
-                        window.location.href = data.confirmationUrl;
-                    } else {
-                        throw new Error(data.error || 'Failed to create subscription');
-                    }
-
-                } catch (err) {
-                    console.error('Error creating subscription:', err);
-                    showToast('Failed to create subscription', 'error');
-                } finally {
-                    setBillingLoading(false);
-                }
-            }
-
-            async function cancelSubscription() {
-                if (!confirm('Are you sure you want to cancel your subscription?')) {
-                    return;
                 }
 
-                try {
-                    setBillingLoading(true);
-                    
-                    const response = await fetch(`/billing/cancel?shop=${shop}`, {
-                        method: 'POST'
-                    });
+                async function saveSettings() {
+                    try {
+                        setSaving(true);
+                        
+                        const response = await fetch(`/api/settings?shop=${shop}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ settings })
+                        });
 
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showToast('Subscription cancelled successfully', 'success');
-                        loadData(); // Reload data
-                    } else {
-                        throw new Error(data.error || 'Failed to cancel subscription');
+                        if (response.ok) {
+                            alert('Settings saved successfully!');
+                        } else {
+                            throw new Error('Failed to save settings');
+                        }
+                    } catch (err) {
+                        console.error('Error saving settings:', err);
+                        alert('Failed to save settings');
+                    } finally {
+                        setSaving(false);
                     }
-
-                } catch (err) {
-                    console.error('Error cancelling subscription:', err);
-                    showToast('Failed to cancel subscription', 'error');
-                } finally {
-                    setBillingLoading(false);
                 }
-            }
 
-            function showToast(message, type = 'info') {
-                // Simple toast implementation
-                const toast = document.createElement('div');
-                toast.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 12px 20px;
-                    border-radius: 6px;
-                    color: white;
-                    font-weight: 500;
-                    z-index: 1000;
-                    background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-                `;
-                toast.textContent = message;
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    document.body.removeChild(toast);
-                }, 3000);
-            }
+                if (loading) {
+                    return React.createElement('div', { style: { textAlign: 'center', padding: '40px' } },
+                        React.createElement('div', { style: { fontSize: '18px', color: '#666' } }, 'Loading AI Support Bot...')
+                    );
+                }
 
-            if (loading) {
-                return React.createElement('div', { className: 'loading' },
-                    React.createElement(Spinner, { size: 'large' }),
-                    React.createElement('div', { style: { marginTop: '16px' } }, 'Loading...')
+                return React.createElement('div', { style: { maxWidth: '800px', margin: '0 auto', padding: '20px' } },
+                    React.createElement('h1', { style: { fontSize: '28px', fontWeight: '600', margin: '0 0 8px 0', color: '#111827' } }, 'AI Support Bot'),
+                    React.createElement('p', { style: { fontSize: '16px', color: '#6b7280', margin: '0 0 24px 0' } }, 'Configure your AI-powered customer support'),
+
+                    // Settings Card
+                    React.createElement('div', { className: 'card' },
+                        React.createElement('h2', { style: { fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: '#374151' } }, 'Bot Settings'),
+                        
+                        React.createElement('div', { style: { marginBottom: '16px' } },
+                            React.createElement('label', { className: 'label' }, 'Welcome Message'),
+                            React.createElement('textarea', {
+                                className: 'textarea',
+                                value: settings.welcomeMessage,
+                                onChange: (e) => setSettings({...settings, welcomeMessage: e.target.value}),
+                                rows: 2
+                            }),
+                            React.createElement('div', { className: 'help-text' }, 'The first message customers see when they open the chat')
+                        ),
+
+                        React.createElement('div', { style: { marginBottom: '16px' } },
+                            React.createElement('label', { className: 'label' }, 'Return Policy'),
+                            React.createElement('textarea', {
+                                className: 'textarea',
+                                value: settings.returnPolicy,
+                                onChange: (e) => setSettings({...settings, returnPolicy: e.target.value}),
+                                rows: 3
+                            }),
+                            React.createElement('div', { className: 'help-text' }, 'Your store\'s return policy information')
+                        ),
+
+                        React.createElement('div', { style: { marginBottom: '16px' } },
+                            React.createElement('label', { className: 'label' }, 'Shipping Policy'),
+                            React.createElement('textarea', {
+                                className: 'textarea',
+                                value: settings.shippingPolicy,
+                                onChange: (e) => setSettings({...settings, shippingPolicy: e.target.value}),
+                                rows: 3
+                            }),
+                            React.createElement('div', { className: 'help-text' }, 'Your store\'s shipping policy information')
+                        ),
+
+                        React.createElement('div', { style: { marginBottom: '16px' } },
+                            React.createElement('label', { className: 'label' }, 'Support Email'),
+                            React.createElement('input', {
+                                className: 'input',
+                                type: 'email',
+                                value: settings.supportEmail,
+                                onChange: (e) => setSettings({...settings, supportEmail: e.target.value})
+                            }),
+                            React.createElement('div', { className: 'help-text' }, 'Email address for customer support')
+                        ),
+
+                        React.createElement('div', { style: { marginBottom: '16px' } },
+                            React.createElement('label', { className: 'label' }, 'Bot Personality'),
+                            React.createElement('select', {
+                                className: 'input',
+                                value: settings.botPersonality,
+                                onChange: (e) => setSettings({...settings, botPersonality: e.target.value})
+                            },
+                                React.createElement('option', { value: 'friendly' }, 'Friendly'),
+                                React.createElement('option', { value: 'professional' }, 'Professional'),
+                                React.createElement('option', { value: 'efficient' }, 'Efficient')
+                            )
+                        ),
+
+                        React.createElement('div', { style: { marginBottom: '16px' } },
+                            React.createElement('label', { className: 'label' }, 'Widget Color'),
+                            React.createElement('input', {
+                                className: 'input',
+                                type: 'color',
+                                value: settings.primaryColor,
+                                onChange: (e) => setSettings({...settings, primaryColor: e.target.value})
+                            }),
+                            React.createElement('div', { className: 'help-text' }, 'Primary color for the chat widget')
+                        ),
+
+                        React.createElement('button', {
+                            className: 'button',
+                            disabled: saving,
+                            onClick: saveSettings
+                        }, saving ? 'Saving...' : 'Save Settings')
+                    ),
+
+                    // Status Card
+                    React.createElement('div', { className: 'card' },
+                        React.createElement('h2', { style: { fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: '#374151' } }, 'App Status'),
+                        React.createElement('div', { className: 'success' },
+                            React.createElement('strong', {}, '✅ App is running successfully!'),
+                            React.createElement('br'),
+                            'Your AI support bot is ready to help customers on your store.'
+                        )
+                    ),
+
+                    // Instructions Card
+                    React.createElement('div', { className: 'card' },
+                        React.createElement('h2', { style: { fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: '#374151' } }, 'Setup Instructions'),
+                        React.createElement('ol', { style: { paddingLeft: '20px', lineHeight: '1.6' } },
+                            React.createElement('li', { style: { marginBottom: '8px' } }, 'Go to Online Store → Themes'),
+                            React.createElement('li', { style: { marginBottom: '8px' } }, 'Click Customize on your active theme'),
+                            React.createElement('li', { style: { marginBottom: '8px' } }, 'Go to App embeds section'),
+                            React.createElement('li', { style: { marginBottom: '8px' } }, 'Enable "AI Assistant Widget"'),
+                            React.createElement('li', { style: { marginBottom: '8px' } }, 'Configure widget settings and save')
+                        )
+                    )
                 );
             }
 
-            if (error) {
-                return React.createElement('div', { className: 'error' }, error);
-            }
-
-            return React.createElement(AppProvider, { i18n: {} },
-                React.createElement(Page, { 
-                    title: 'AI Support Bot',
-                    subtitle: 'Configure your AI-powered customer support'
-                },
-                    React.createElement(Layout, {},
-                        // Billing Status Card
-                        React.createElement(Layout.Section, {},
-                            React.createElement(Card, { sectioned: true },
-                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
-                                    React.createElement(Text, { variant: 'headingMd' }, 'Billing Status'),
-                                    React.createElement(Stack, { vertical: true, spacing: 'tight' },
-                                        React.createElement(Text, { variant: 'bodyMd' }, 
-                                            `Plan: ${billingStatus.plan} (${billingStatus.status})`
-                                        ),
-                                        React.createElement(Text, { variant: 'bodyMd' }, 
-                                            `Access: ${billingStatus.hasAccess ? 'Active' : 'Inactive'}`
-                                        ),
-                                        billingStatus.trialEndsAt && React.createElement(Text, { variant: 'bodyMd' }, 
-                                            `Trial ends: ${new Date(billingStatus.trialEndsAt).toLocaleDateString()}`
-                                        )
-                                    ),
-                                    React.createElement(Stack, { spacing: 'tight' },
-                                        !billingStatus.hasAccess ? 
-                                            React.createElement(Button, { 
-                                                primary: true, 
-                                                loading: billingLoading,
-                                                onClick: () => createSubscription('starter')
-                                            }, 'Subscribe Now') :
-                                            React.createElement(Button, { 
-                                                destructive: true, 
-                                                loading: billingLoading,
-                                                onClick: cancelSubscription
-                                            }, 'Cancel Subscription')
-                                    )
-                                )
-                            )
-                        ),
-
-                        // Settings Card
-                        React.createElement(Layout.Section, {},
-                            React.createElement(Card, { sectioned: true },
-                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
-                                    React.createElement(Text, { variant: 'headingMd' }, 'Bot Settings'),
-                                    
-                                    React.createElement(TextField, {
-                                        label: 'Welcome Message',
-                                        value: settings.welcomeMessage,
-                                        onChange: (value) => setSettings({...settings, welcomeMessage: value}),
-                                        multiline: 2,
-                                        helpText: 'The first message customers see when they open the chat'
-                                    }),
-
-                                    React.createElement(TextField, {
-                                        label: 'Return Policy',
-                                        value: settings.returnPolicy,
-                                        onChange: (value) => setSettings({...settings, returnPolicy: value}),
-                                        multiline: 3,
-                                        helpText: 'Your store\'s return policy information'
-                                    }),
-
-                                    React.createElement(TextField, {
-                                        label: 'Shipping Policy',
-                                        value: settings.shippingPolicy,
-                                        onChange: (value) => setSettings({...settings, shippingPolicy: value}),
-                                        multiline: 3,
-                                        helpText: 'Your store\'s shipping policy information'
-                                    }),
-
-                                    React.createElement(TextField, {
-                                        label: 'Support Email',
-                                        value: settings.supportEmail,
-                                        onChange: (value) => setSettings({...settings, supportEmail: value}),
-                                        type: 'email',
-                                        helpText: 'Email address for customer support'
-                                    }),
-
-                                    React.createElement(Select, {
-                                        label: 'Bot Personality',
-                                        options: [
-                                            { label: 'Friendly', value: 'friendly' },
-                                            { label: 'Professional', value: 'professional' },
-                                            { label: 'Efficient', value: 'efficient' }
-                                        ],
-                                        value: settings.botPersonality,
-                                        onChange: (value) => setSettings({...settings, botPersonality: value})
-                                    }),
-
-                                    React.createElement(TextField, {
-                                        label: 'Widget Color',
-                                        value: settings.primaryColor,
-                                        onChange: (value) => setSettings({...settings, primaryColor: value}),
-                                        type: 'color',
-                                        helpText: 'Primary color for the chat widget'
-                                    }),
-
-                                    React.createElement(Button, {
-                                        primary: true,
-                                        loading: saving,
-                                        onClick: saveSettings
-                                    }, 'Save Settings')
-                                )
-                            )
-                        ),
-
-                        // Analytics Card
-                        React.createElement(Layout.Section, {},
-                            React.createElement(Card, { sectioned: true },
-                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
-                                    React.createElement(Text, { variant: 'headingMd' }, 'Analytics'),
-                                    
-                                    React.createElement(Stack, { spacing: 'loose' },
-                                        React.createElement(Stack, { vertical: true, spacing: 'tight' },
-                                            React.createElement(Text, { variant: 'bodyMd' }, 'Total Conversations'),
-                                            React.createElement(Text, { variant: 'headingLg' }, analytics.totalConversations)
-                                        ),
-                                        React.createElement(Stack, { vertical: true, spacing: 'tight' },
-                                            React.createElement(Text, { variant: 'bodyMd' }, 'Escalated'),
-                                            React.createElement(Text, { variant: 'headingLg' }, analytics.escalatedConversations)
-                                        ),
-                                        React.createElement(Stack, { vertical: true, spacing: 'tight' },
-                                            React.createElement(Text, { variant: 'bodyMd' }, 'Avg Response Time'),
-                                            React.createElement(Text, { variant: 'headingLg' }, `${analytics.averageResponseTime}s`)
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-
-                        // Instructions Card
-                        React.createElement(Layout.Section, {},
-                            React.createElement(Card, { sectioned: true },
-                                React.createElement(Stack, { vertical: true, spacing: 'loose' },
-                                    React.createElement(Text, { variant: 'headingMd' }, 'Setup Instructions'),
-                                    
-                                    React.createElement(Stack, { vertical: true, spacing: 'tight' },
-                                        React.createElement(Text, { variant: 'bodyMd' }, 
-                                            '1. Go to Online Store → Themes'
-                                        ),
-                                        React.createElement(Text, { variant: 'bodyMd' }, 
-                                            '2. Click Customize on your active theme'
-                                        ),
-                                        React.createElement(Text, { variant: 'bodyMd' }, 
-                                            '3. Go to App embeds section'
-                                        ),
-                                        React.createElement(Text, { variant: 'bodyMd' }, 
-                                            '4. Enable "AI Assistant Widget"'
-                                        ),
-                                        React.createElement(Text, { variant: 'bodyMd' }, 
-                                            '5. Configure widget settings and save'
-                                        )
-                                    ),
-
-                                    React.createElement(Banner, {
-                                        title: 'Widget is now active!',
-                                        status: 'success'
-                                    }, 'Your AI support bot is ready to help customers on your store.')
-                                )
-                            )
-                        )
-                    )
-                )
-            );
+            // Render the app
+            ReactDOM.render(React.createElement(App), document.getElementById('app'));
         }
-
-        // Render the app
-        ReactDOM.render(React.createElement(App), document.getElementById('app'));
     </script>
 </body>
 </html>

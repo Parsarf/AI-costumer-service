@@ -16,18 +16,24 @@ router.get('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
+    // Get shop from database
+    const shopRecord = await prisma.shop.findFirst({
+      where: { shopifyDomain: shop }
+    });
+
+    if (!shopRecord) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
+
     // Get conversation statistics
     const totalConversations = await prisma.conversation.count({
-      where: { shop }
+      where: { shopId: shopRecord.id }
     });
 
     const escalatedConversations = await prisma.conversation.count({
       where: { 
-        shop,
-        metadata: {
-          path: ['escalated'],
-          equals: true
-        }
+        shopId: shopRecord.id,
+        escalated: true
       }
     });
 
@@ -36,7 +42,7 @@ router.get('/', async (req, res) => {
     
     const recentConversations = await prisma.conversation.findMany({
       where: {
-        shop,
+        shopId: shopRecord.id,
         createdAt: {
           gte: thirtyDaysAgo
         }
@@ -60,7 +66,7 @@ router.get('/', async (req, res) => {
     const dailyConversations = await prisma.conversation.groupBy({
       by: ['createdAt'],
       where: {
-        shop,
+        shopId: shopRecord.id,
         createdAt: {
           gte: sevenDaysAgo
         }
@@ -86,14 +92,17 @@ router.get('/', async (req, res) => {
       };
     });
 
-    // Get top customer issues (from conversation prompts)
-    const topIssues = await prisma.conversation.groupBy({
-      by: ['prompt'],
+    // Get top customer issues (from messages)
+    const topIssues = await prisma.message.groupBy({
+      by: ['content'],
       where: {
-        shop,
-        createdAt: {
-          gte: thirtyDaysAgo
-        }
+        conversation: {
+          shopId: shopRecord.id,
+          createdAt: {
+            gte: thirtyDaysAgo
+          }
+        },
+        role: 'user'
       },
       _count: {
         id: true
@@ -115,7 +124,7 @@ router.get('/', async (req, res) => {
       recentConversations: recentConversations.length,
       dailyData,
       topIssues: topIssues.map(issue => ({
-        prompt: issue.prompt.substring(0, 100) + (issue.prompt.length > 100 ? '...' : ''),
+        content: issue.content.substring(0, 100) + (issue.content.length > 100 ? '...' : ''),
         count: issue._count.id
       })),
       lastUpdated: new Date().toISOString()
@@ -143,15 +152,27 @@ router.get('/conversations', async (req, res) => {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
+    // Get shop from database
+    const shopRecord = await prisma.shop.findFirst({
+      where: { shopifyDomain: shop }
+    });
+
+    if (!shopRecord) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
+
     const conversations = await prisma.conversation.findMany({
-      where: { shop },
+      where: { shopId: shopRecord.id },
       orderBy: { createdAt: 'desc' },
       take: parseInt(limit),
       skip: parseInt(offset),
       select: {
         id: true,
-        prompt: true,
-        reply: true,
+        customerEmail: true,
+        customerName: true,
+        status: true,
+        escalated: true,
+        messageCount: true,
         createdAt: true,
         updatedAt: true,
         metadata: true
@@ -159,7 +180,7 @@ router.get('/conversations', async (req, res) => {
     });
 
     const totalCount = await prisma.conversation.count({
-      where: { shop }
+      where: { shopId: shopRecord.id }
     });
 
     res.json({

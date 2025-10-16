@@ -156,18 +156,21 @@ const testUtils = {
     }
   },
 
-  // Mock Claude API responses
-  mockClaudeResponses: {
+  // Mock OpenAI API responses
+  mockOpenAIResponses: {
     success: {
-      content: [
+      choices: [
         {
-          type: 'text',
-          text: 'I\'d be happy to help you with your order! Please provide your order number and I\'ll look into it for you.'
+          message: {
+            role: 'assistant',
+            content: 'I\'d be happy to help you with your order! Please provide your order number and I\'ll look into it for you.'
+          }
         }
       ],
       usage: {
-        input_tokens: 150,
-        output_tokens: 75
+        prompt_tokens: 150,
+        completion_tokens: 75,
+        total_tokens: 225
       }
     },
     error: {

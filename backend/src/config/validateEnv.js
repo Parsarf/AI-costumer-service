@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 const REQUIRED_VARS = [
   'SHOPIFY_API_KEY',
   'SHOPIFY_API_SECRET',
-  'ANTHROPIC_API_KEY',
+  'OPENAI_API_KEY',
   'DATABASE_URL',
   'APP_URL',
   'ENCRYPTION_KEY'
@@ -82,9 +82,9 @@ function validateSpecificFormats(errors, warnings) {
     errors.push('SHOPIFY_API_SECRET must be a 32-character hex string');
   }
 
-  // Validate ANTHROPIC_API_KEY format
-  if (process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
-    errors.push('ANTHROPIC_API_KEY must start with "sk-ant-"');
+  // Validate OPENAI_API_KEY format
+  if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.startsWith('sk-')) {
+    errors.push('OPENAI_API_KEY must start with "sk-"');
   }
 
   // Validate DATABASE_URL format
@@ -167,7 +167,7 @@ SCOPES=read_products,read_orders,read_customers,write_themes
 DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
 # AI Service
-ANTHROPIC_API_KEY=sk-ant-api03-your_key_here
+OPENAI_API_KEY=sk-proj-your_key_here
 
 # Security
 JWT_SECRET=your_jwt_secret_change_in_production

@@ -1,5 +1,5 @@
 /**
- * Build comprehensive system prompt for Claude based on context
+ * Build comprehensive system prompt for OpenAI based on context
  */
 function buildContextualPrompt(store, conversation, intent, orderData, productData) {
   const { settings } = store;

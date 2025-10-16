@@ -1,9 +1,12 @@
 const { shopifyApi, ApiVersion, LogSeverity } = require('@shopify/shopify-api');
+const { restResources } = require('@shopify/shopify-api/rest/admin/2024-01');
+require('@shopify/shopify-api/adapters/node');
 const { PrismaSessionStorage } = require('@shopify/shopify-app-session-storage-prisma');
 const prisma = require('./prisma');
 
 // Initialize Shopify API
 const shopify = shopifyApi({
+  restResources,
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
   scopes: process.env.SCOPES.split(','),

@@ -37,7 +37,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.shopify.com", "https://unpkg.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.shopify.com", "https://unpkg.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.shopify.com", "https://api.anthropic.com"],
+      connectSrc: ["'self'", "https://api.shopify.com", "https://api.openai.com"],
       fontSrc: ["'self'", "https://cdn.shopify.com", "https://unpkg.com"]
     }
   },

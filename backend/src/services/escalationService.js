@@ -4,9 +4,9 @@ const { sendEmail } = require('../utils/emailSender');
 /**
  * Check if message or response contains escalation triggers
  */
-function checkEscalation(userMessage, claudeResponse = '') {
+function checkEscalation(userMessage, aiResponse = '') {
   const escalationTriggers = [
-    // Claude explicitly suggests escalation
+    // AI explicitly suggests escalation
     /connect you.*support/i,
     /transfer.*human/i,
     /reach out.*team/i,
@@ -46,7 +46,7 @@ function checkEscalation(userMessage, claudeResponse = '') {
     /complaint/i
   ];
 
-  const combinedText = `${userMessage} ${claudeResponse}`;
+  const combinedText = `${userMessage} ${aiResponse}`;
   
   for (const trigger of escalationTriggers) {
     if (trigger.test(combinedText)) {

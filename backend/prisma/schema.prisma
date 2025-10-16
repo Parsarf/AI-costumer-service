@@ -80,7 +80,7 @@ model Message {
   metadata        Json     @default("{}")
   tokens          Int?
   responseTime    Int?
-  claudeModel     String?
+  aiModel         String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   

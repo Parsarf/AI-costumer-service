@@ -1,7 +1,7 @@
 const express = require('express');
 const { shopify } = require('../lib/shopify');
 const prisma = require('../lib/prisma');
-const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/claudeService');
+const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/openaiService');
 const { validateBilling } = require('../middleware/validateBilling');
 const { chatLimiter } = require('../middleware/rateLimit');
 const { validateInput } = require('../middleware/validateInput');
@@ -68,19 +68,19 @@ router.post('/', chatLimiter, validateInput, validateBilling, async (req, res) =
       { role: 'user', content: message }
     ]);
 
-    // Get Claude response
-    const claudeResponse = await sendMessage(messages, systemPrompt);
+    // Get OpenAI response
+    const aiResponse = await sendMessage(messages, systemPrompt);
 
     // Save conversation
     await prisma.conversation.update({
       where: { id: conversation.id },
-      data: { reply: claudeResponse.content }
+      data: { reply: aiResponse.content }
     });
 
     res.json({
-      reply: claudeResponse.content,
+      reply: aiResponse.content,
       conversationId: conversation.id,
-      usage: claudeResponse.usage
+      usage: aiResponse.usage
     });
 
   } catch (error) {

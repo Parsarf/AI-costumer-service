@@ -29,13 +29,14 @@
     "shopify",
     "ai",
     "customer-support",
-    "claude",
+    "chatgpt",
+    "openai",
     "app"
   ],
   "author": "Parsarf",
   "license": "MIT",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.27.0",
+    "openai": "^4.20.0",
     "@prisma/client": "6.17.0",
     "@shopify/app-bridge": "^3.7.0",
     "@shopify/app-bridge-react": "^3.7.0",

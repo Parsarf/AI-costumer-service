@@ -81,7 +81,7 @@ async function saveMessage(conversationId, role, content, metadata = {}) {
       metadata,
       tokens: metadata.tokens,
       responseTime: metadata.responseTime,
-      claudeModel: metadata.model
+      aiModel: metadata.model
     });
 
     // Update conversation
@@ -98,7 +98,7 @@ async function saveMessage(conversationId, role, content, metadata = {}) {
 }
 
 /**
- * Get conversation history formatted for Claude
+ * Get conversation history formatted for OpenAI
  */
 async function getConversationHistory(conversationId, limit = 20) {
   try {

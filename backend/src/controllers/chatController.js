@@ -1,6 +1,6 @@
 const Store = require('../models/Store');
 const { getOrCreateConversation, saveMessage, getConversationHistory } = require('../services/conversationService');
-const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/claudeService');
+const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/openaiService');
 const { fetchOrderInfo, fetchProductInfo } = require('../services/shopifyService');
 const { checkEscalation, analyzeEscalationNeed, notifyEscalation, getEscalationMessage } = require('../services/escalationService');
 const { extractOrderNumber, extractProductQuery, detectIntent } = require('../utils/orderParser');
@@ -92,20 +92,20 @@ async function handleChatMessage(req, res) {
     // Get conversation history
     const history = await getConversationHistory(conversation.id);
 
-    // Format messages for Claude
-    const claudeMessages = formatMessages([
+    // Format messages for OpenAI
+    const aiMessages = formatMessages([
       ...history,
       { role: 'user', content: message }
     ]);
 
-    // Get response from Claude
-    const claudeResponse = await sendMessage(claudeMessages, systemPrompt);
+    // Get response from OpenAI
+    const aiResponse = await sendMessage(aiMessages, systemPrompt);
 
     // Check for escalation triggers
-    const needsEscalation = checkEscalation(message, claudeResponse.content);
+    const needsEscalation = checkEscalation(message, aiResponse.content);
     const escalationAnalysis = analyzeEscalationNeed(conversation, message);
 
-    let finalResponse = claudeResponse.content;
+    let finalResponse = aiResponse.content;
     let escalated = false;
 
     if (needsEscalation || escalationAnalysis.shouldEscalate) {
@@ -130,9 +130,9 @@ async function handleChatMessage(req, res) {
 
     // Save assistant message
     await saveMessage(conversation.id, 'assistant', finalResponse, {
-      tokens: claudeResponse.usage.output_tokens,
-      responseTime: claudeResponse.responseTime,
-      model: claudeResponse.model,
+      tokens: aiResponse.usage.output_tokens,
+      responseTime: aiResponse.responseTime,
+      model: aiResponse.model,
       orderData: orderData ? { orderNumber: orderData.name } : null,
       escalated
     });

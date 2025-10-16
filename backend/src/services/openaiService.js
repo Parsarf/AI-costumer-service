@@ -1,11 +1,11 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 const logger = require('../utils/logger');
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const OPENAI_MODEL = 'gpt-4-turbo-preview';
 const MAX_TOKENS = 1024;
 
 /**
@@ -85,47 +85,54 @@ When you need to escalate, respond with: "I understand this requires special att
 }
 
 /**
- * Send message to Claude and get response
+ * Send message to OpenAI and get response
  */
 async function sendMessage(messages, systemPrompt, options = {}) {
   const startTime = Date.now();
   
   try {
-    logger.info('Sending request to Claude API', {
+    logger.info('Sending request to OpenAI API', {
       messageCount: messages.length,
-      model: CLAUDE_MODEL
+      model: OPENAI_MODEL
     });
 
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
+    const response = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
       max_tokens: options.maxTokens || MAX_TOKENS,
-      system: systemPrompt,
-      messages: messages,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages
+      ],
       temperature: options.temperature || 1.0
     });
 
     const responseTime = Date.now() - startTime;
     
-    logger.info('Received Claude response', {
+    logger.info('Received OpenAI response', {
       responseTime,
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens
+      promptTokens: response.usage.prompt_tokens,
+      completionTokens: response.usage.completion_tokens,
+      totalTokens: response.usage.total_tokens
     });
 
     return {
-      content: response.content[0].text,
+      content: response.choices[0].message.content,
       model: response.model,
-      usage: response.usage,
+      usage: {
+        input_tokens: response.usage.prompt_tokens,
+        output_tokens: response.usage.completion_tokens,
+        total_tokens: response.usage.total_tokens
+      },
       responseTime
     };
   } catch (error) {
-    logger.error('Claude API error:', error);
+    logger.error('OpenAI API error:', error);
     
     // Handle specific error types
     if (error.status === 429) {
       throw new Error('Rate limit exceeded. Please try again in a moment.');
     } else if (error.status === 401) {
-      throw new Error('Invalid Claude API key.');
+      throw new Error('Invalid OpenAI API key.');
     } else {
       throw new Error('Failed to generate response. Please try again.');
     }
@@ -133,7 +140,7 @@ async function sendMessage(messages, systemPrompt, options = {}) {
 }
 
 /**
- * Format conversation history for Claude API
+ * Format conversation history for OpenAI API
  */
 function formatMessages(messageHistory) {
   return messageHistory.map(msg => ({

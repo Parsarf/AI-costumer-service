@@ -34,17 +34,17 @@ const Message = sequelize.define('Message', {
   tokens: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    comment: 'Token count for Claude API usage tracking'
+    comment: 'Token count for AI API usage tracking'
   },
   responseTime: {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: 'Response time in milliseconds'
   },
-  claudeModel: {
+  aiModel: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    comment: 'Claude model version used'
+    comment: 'AI model version used (GPT-4, etc.)'
   }
 }, {
   tableName: 'messages',

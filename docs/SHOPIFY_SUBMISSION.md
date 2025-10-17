@@ -95,7 +95,7 @@ Complete checklist and guide for submitting your AI Support Bot to the Shopify A
 ```markdown
 ## Transform Your Customer Support with AI
 
-[Product Name] uses advanced AI (Claude by Anthropic) to provide instant, accurate support to your customers 24/7. Reduce your support costs while improving customer satisfaction.
+[Product Name] uses advanced AI (GPT-4 by OpenAI) to provide instant, accurate support to your customers 24/7. Reduce your support costs while improving customer satisfaction.
 
 ## Key Features
 

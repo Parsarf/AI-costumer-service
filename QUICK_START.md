@@ -9,7 +9,7 @@ Get your Shopify AI Support Bot up and running in minutes!
 Before starting, get these ready:
 
 - ✅ [Shopify Partner Account](https://partners.shopify.com/signup)
-- ✅ [Claude API Key](https://console.anthropic.com) 
+- ✅ [OpenAI API Key](https://platform.openai.com) 
 - ✅ [Railway Account](https://railway.app) (for hosting)
 - ✅ Node.js 18+ installed
 - ✅ PostgreSQL 14+ installed (for local dev)
@@ -24,11 +24,11 @@ Before starting, get these ready:
 2. Apps → Create app → Custom app
 3. Note your **API Key** and **API Secret**
 
-#### Claude API Key
+#### OpenAI API Key
 
-1. Go to https://console.anthropic.com
-2. Get API access
-3. Generate an API key (starts with `sk-ant-api03-...`)
+1. Go to https://platform.openai.com
+2. Sign up or log in
+3. Generate an API key (starts with `sk-proj-...` or `sk-...`)
 
 ---
 
@@ -50,7 +50,7 @@ cp env.example .env
 # Edit .env with your keys
 # SHOPIFY_API_KEY=your_key
 # SHOPIFY_API_SECRET=your_secret
-# CLAUDE_API_KEY=sk-ant-api03-...
+# OPENAI_API_KEY=sk-proj-...
 # DATABASE_URL=postgresql://localhost/shopify_support_bot
 
 # Setup database
@@ -125,7 +125,7 @@ railway add  # Select PostgreSQL
 # Set environment variables
 railway variables set SHOPIFY_API_KEY=your_key
 railway variables set SHOPIFY_API_SECRET=your_secret
-railway variables set CLAUDE_API_KEY=your_claude_key
+railway variables set OPENAI_API_KEY=your_openai_key
 railway variables set SHOPIFY_SCOPES=read_orders,read_products,read_customers,write_script_tags
 
 # Get your URL
@@ -253,16 +253,16 @@ railway logs | grep "OAuth"
 **Debug:**
 Visit: `https://your-app.railway.app/widget/loader.js`
 
-### Issue: Claude not responding
+### Issue: OpenAI not responding
 
 **Check:**
-1. ✅ CLAUDE_API_KEY is correct
+1. ✅ OPENAI_API_KEY is correct
 2. ✅ API key has credits
 3. ✅ No rate limits hit
 
 **Debug:**
 ```bash
-railway logs | grep "Claude"
+railway logs | grep "OpenAI"
 ```
 
 ### Issue: Database connection fails

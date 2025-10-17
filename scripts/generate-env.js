@@ -36,7 +36,7 @@ SCOPES=read_products,read_orders,read_customers,write_themes
 DATABASE_URL=postgresql://postgres:password@localhost:5432/shopify_support_bot
 
 # AI Service
-ANTHROPIC_API_KEY=sk-ant-api03-your_claude_api_key_here
+OPENAI_API_KEY=sk-proj-your_openai_api_key_here
 
 # Security (Generated secure keys)
 JWT_SECRET=${generateJWTSecret()}
@@ -53,7 +53,7 @@ LOG_LEVEL=info
 
 # Instructions:
 # 1. Replace SHOPIFY_API_KEY and SHOPIFY_API_SECRET with your actual Shopify app credentials
-# 2. Replace ANTHROPIC_API_KEY with your Claude API key from https://console.anthropic.com
+# 2. Replace OPENAI_API_KEY with your OpenAI API key from https://platform.openai.com
 # 3. Update DATABASE_URL with your actual database connection string
 # 4. Update APP_URL with your actual deployment URL
 # 5. For production, set NODE_ENV=production and SHOPIFY_BILLING_TEST=false
@@ -69,7 +69,7 @@ try {
   console.log('📝 Please update the following with your actual values:');
   console.log('   - SHOPIFY_API_KEY');
   console.log('   - SHOPIFY_API_SECRET');
-  console.log('   - ANTHROPIC_API_KEY');
+  console.log('   - OPENAI_API_KEY');
   console.log('   - DATABASE_URL');
   console.log('   - APP_URL');
 } catch (error) {

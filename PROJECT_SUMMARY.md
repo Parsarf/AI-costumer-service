@@ -90,7 +90,7 @@ Create `backend/.env`:
 ```bash
 SHOPIFY_API_KEY=your_key
 SHOPIFY_API_SECRET=your_secret
-CLAUDE_API_KEY=sk-ant-api03-...
+OPENAI_API_KEY=sk-proj-...
 DATABASE_URL=postgresql://localhost/shopify_support_bot
 APP_URL=http://localhost:3001
 ```

@@ -1,10 +1,10 @@
 # 🤖 Shopify AI Support Bot
 
-A production-ready Shopify app that provides AI-powered customer support using Claude (Anthropic). Features embedded admin UI, theme app extension, billing, and GDPR compliance.
+A production-ready Shopify app that provides AI-powered customer support using ChatGPT (OpenAI). Features embedded admin UI, theme app extension, billing, and GDPR compliance.
 
 ## 🚀 Features
 
-- **AI-Powered Support**: Uses Claude Sonnet 4.5 for intelligent, context-aware responses
+- **AI-Powered Support**: Uses GPT-4 Turbo for intelligent, context-aware responses
 - **Theme App Extension**: Native Shopify theme integration (no script tags)
 - **Embedded Admin UI**: Built with Polaris and App Bridge
 - **Billing Integration**: GraphQL billing with trials and subscriptions
@@ -16,7 +16,7 @@ A production-ready Shopify app that provides AI-powered customer support using C
 - Node.js 18+
 - PostgreSQL database
 - Shopify Partner account
-- Claude API key (Anthropic)
+- OpenAI API key
 - Railway account (for hosting)
 
 ## 🛠️ Local Development
@@ -54,7 +54,7 @@ SCOPES=read_products,read_orders,read_customers,write_themes
 DATABASE_URL=postgresql://user:pass@localhost:5432/shopify_support_bot
 
 # AI Service
-ANTHROPIC_API_KEY=sk-ant-api03-...
+OPENAI_API_KEY=sk-proj-...
 
 # Security
 JWT_SECRET=your_jwt_secret_change_in_production
@@ -128,7 +128,7 @@ Visit: `https://your-ngrok-url.ngrok.io/auth?shop=your-dev-store.myshopify.com`
    ```bash
    railway variables set SHOPIFY_API_KEY=your_key
    railway variables set SHOPIFY_API_SECRET=your_secret
-   railway variables set ANTHROPIC_API_KEY=your_claude_key
+   railway variables set OPENAI_API_KEY=your_openai_key
    railway variables set JWT_SECRET=your_jwt_secret
    railway variables set ENCRYPTION_KEY=your_encryption_key
    ```
@@ -299,8 +299,8 @@ Configure via the embedded admin app:
 - Check DATABASE_URL is correct
 - Verify PostgreSQL is running
 
-**Claude API errors**:
-- Verify ANTHROPIC_API_KEY is correct
+**OpenAI API errors**:
+- Verify OPENAI_API_KEY is correct
 - Check API usage limits
 - Ensure billing is active
 

@@ -54,7 +54,7 @@
 # Edit backend/.env file with your actual credentials:
 SHOPIFY_API_KEY=your_actual_32_character_hex_key
 SHOPIFY_API_SECRET=your_actual_32_character_hex_secret
-ANTHROPIC_API_KEY=sk-ant-api03-your_actual_claude_key
+OPENAI_API_KEY=sk-proj-your_actual_openai_key
 DATABASE_URL=postgresql://user:pass@host:5432/dbname
 APP_URL=https://your-app.railway.app
 ```
@@ -81,7 +81,7 @@ railway add postgresql
 # Set environment variables in Railway
 railway variables set SHOPIFY_API_KEY=your_key
 railway variables set SHOPIFY_API_SECRET=your_secret
-railway variables set ANTHROPIC_API_KEY=your_claude_key
+railway variables set OPENAI_API_KEY=your_openai_key
 railway variables set JWT_SECRET=your_jwt_secret
 railway variables set ENCRYPTION_KEY=your_encryption_key
 railway variables set APP_URL=https://your-app.railway.app

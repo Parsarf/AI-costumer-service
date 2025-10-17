@@ -89,7 +89,7 @@ async function main() {
   log('1. Update backend/.env with your actual API keys:', 'yellow');
   log('   - SHOPIFY_API_KEY (from Shopify Partners)', 'yellow');
   log('   - SHOPIFY_API_SECRET (from Shopify Partners)', 'yellow');
-  log('   - ANTHROPIC_API_KEY (from https://console.anthropic.com)', 'yellow');
+  log('   - OPENAI_API_KEY (from https://platform.openai.com)', 'yellow');
   log('   - DATABASE_URL (your PostgreSQL connection string)', 'yellow');
   log('   - APP_URL (your deployment URL)', 'yellow');
   log('');

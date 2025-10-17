@@ -50,7 +50,7 @@ SCOPES=read_products,read_orders,read_customers,write_themes
 DATABASE_URL=postgresql://postgres:password@host:5432/railway
 
 # AI Service
-ANTHROPIC_API_KEY=sk-ant-api03-your_key_here
+OPENAI_API_KEY=sk-proj-your_key_here
 
 # Security
 JWT_SECRET=your_secure_jwt_secret_here

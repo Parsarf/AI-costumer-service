@@ -14,24 +14,12 @@ redirect_urls = [
   "https://ai-customerservice-production.up.railway.app/auth/shopify/callback"
 ]
 
-[webhooks]
-api_version = "2023-10"
-
 [pos]
 embedded = false
 
 [build]
 automatically_update_urls_on_dev = true
 dev_store_url = "your-dev-store.myshopify.com"
-
-[[webhooks.subscriptions]]
-topics = ["orders/create", "orders/updated", "orders/paid", "orders/cancelled", "orders/fulfilled"]
-uri = "https://ai-customerservice-production.up.railway.app/webhooks/orders"
-
-
-[[webhooks.subscriptions]]
-topics = ["app/uninstalled"]
-uri = "https://ai-customerservice-production.up.railway.app/webhooks/app/uninstalled"
 
 [[extensions]]
 type = "theme"

@@ -1,0 +1,29 @@
+{
+  "name": "ai-support-bot",
+  "version": "1.0.0",
+  "description": "AI-powered customer support bot for Shopify stores",
+  "main": "backend/server.js",
+  "scripts": {
+    "dev": "cd backend && npm run dev",
+    "start": "cd backend && npm start",
+    "build": "cd chat-widget && npm run build",
+    "test": "cd backend && npm test",
+    "deploy": "npm run build && cd backend && npm run deploy"
+  },
+  "keywords": [
+    "shopify",
+    "ai",
+    "chatbot",
+    "customer-support",
+    "theme-extension"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@shopify/cli": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

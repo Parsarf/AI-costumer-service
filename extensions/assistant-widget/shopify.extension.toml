@@ -5,6 +5,7 @@ api_version = "2023-10"
 [[extensions]]
 type = "theme"
 name = "AI Assistant Widget"
+handle = "assistant-widget"
 description = "Add an AI-powered customer support chat widget to your store"
 
 [extensions.settings]

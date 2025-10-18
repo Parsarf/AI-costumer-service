@@ -36,7 +36,6 @@ uri = "https://ai-customerservice-production.up.railway.app/webhooks/customers"
 topics = ["app/uninstalled"]
 uri = "https://ai-customerservice-production.up.railway.app/webhooks/app/uninstalled"
 
-[extensions]
 [[extensions]]
 type = "theme"
 name = "AI Assistant Widget"

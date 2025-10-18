@@ -1,5 +1,6 @@
-# Theme App Extension Configuration
-# This file configures the AI Assistant Widget for Shopify themes
+# Learn more about configuring your theme app extension at https://shopify.dev/docs/apps/online-store/theme-app-extensions
+
+api_version = "2023-10"
 
 [[extensions]]
 type = "theme"

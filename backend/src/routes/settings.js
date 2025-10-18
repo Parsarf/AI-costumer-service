@@ -18,9 +18,9 @@ router.get('/', async (req, res) => {
       where: { shop },
       select: {
         shop: true,
-        plan: true,
+        subscriptionTier: true,
         settings: true,
-        isActive: true,
+        active: true,
         createdAt: true
       }
     });

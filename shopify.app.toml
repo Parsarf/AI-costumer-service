@@ -1,0 +1,85 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "ai-support-bot"
+client_id = "your-client-id-here"
+application_url = "https://ai-customerservice-production.up.railway.app"
+embedded = true
+
+[access_scopes]
+scopes = "write_products,read_orders,write_orders,read_customers,write_customers,read_themes,write_themes"
+
+[auth]
+redirect_urls = [
+  "https://ai-customerservice-production.up.railway.app/auth/callback",
+  "https://ai-customerservice-production.up.railway.app/auth/shopify/callback"
+]
+
+[webhooks]
+api_version = "2023-10"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "your-dev-store.myshopify.com"
+
+[[webhooks.subscriptions]]
+topics = ["orders/create", "orders/updated", "orders/paid", "orders/cancelled", "orders/fulfilled"]
+uri = "https://ai-customerservice-production.up.railway.app/webhooks/orders"
+
+[[webhooks.subscriptions]]
+topics = ["customers/create", "customers/update"]
+uri = "https://ai-customerservice-production.up.railway.app/webhooks/customers"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "https://ai-customerservice-production.up.railway.app/webhooks/app/uninstalled"
+
+[extensions]
+[[extensions]]
+type = "theme"
+name = "AI Assistant Widget"
+description = "Add an AI-powered customer support chat widget to your store"
+
+[extensions.settings]
+  [[extensions.settings.settings]]
+  type = "text"
+  id = "welcome_message"
+  label = "Welcome Message"
+  default = "Hi! How can I help you today?"
+  info = "The first message customers see when they open the chat"
+
+  [[extensions.settings.settings]]
+  type = "color"
+  id = "primary_color"
+  label = "Widget Color"
+  default = "#4F46E5"
+  info = "Choose the primary color for the chat widget"
+
+  [[extensions.settings.settings]]
+  type = "select"
+  id = "position"
+  label = "Widget Position"
+  options = [
+    { value = "bottom-right", label = "Bottom Right" },
+    { value = "bottom-left", label = "Bottom Left" }
+  ]
+  default = "bottom-right"
+  info = "Choose where to display the chat widget on your store"
+
+  [[extensions.settings.settings]]
+  type = "checkbox"
+  id = "show_on_mobile"
+  label = "Show on Mobile"
+  default = true
+  info = "Display the chat widget on mobile devices"
+
+  [[extensions.settings.settings]]
+  type = "number"
+  id = "auto_open_delay"
+  label = "Auto-open Delay (seconds)"
+  default = 0
+  min = 0
+  max = 60
+  info = "Automatically open chat after this many seconds (0 = disabled)"

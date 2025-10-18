@@ -1,4 +1,4 @@
-const Store = require('../models/Store');
+const prisma = require('../lib/prisma');
 const logger = require('../utils/logger');
 
 /**
@@ -9,9 +9,16 @@ async function getSettings(req, res) {
   try {
     const { shop } = req.params;
 
-    const store = await Store.findOne({ 
+    const store = await prisma.shop.findUnique({
       where: { shop },
-      attributes: ['shop', 'storeName', 'settings', 'subscriptionTier', 'conversationCount', 'conversationLimit']
+      select: {
+        shop: true,
+        storeName: true,
+        settings: true,
+        subscriptionTier: true,
+        conversationCount: true,
+        conversationLimit: true
+      }
     });
 
     if (!store) {
@@ -49,25 +56,28 @@ async function updateSettings(req, res) {
 
     logger.info('Updating settings', { shop, keys: Object.keys(settings) });
 
-    const store = await Store.findOne({ where: { shop } });
+    const store = await prisma.shop.findUnique({ where: { shop } });
 
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
 
     // Merge new settings with existing ones
-    store.settings = {
+    const mergedSettings = {
       ...store.settings,
       ...settings
     };
 
-    await store.save();
+    const updatedStore = await prisma.shop.update({
+      where: { shop },
+      data: { settings: mergedSettings }
+    });
 
     logger.info('Settings updated successfully', { shop });
 
     res.json({
       success: true,
-      settings: store.settings,
+      settings: updatedStore.settings,
       message: 'Settings updated successfully'
     });
   } catch (error) {

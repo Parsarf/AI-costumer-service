@@ -4,11 +4,11 @@ const { shopifyApi, ApiVersion, LogSeverity } = require('@shopify/shopify-api');
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
-  scopes: process.env.SHOPIFY_SCOPES.split(','),
+  scopes: process.env.SCOPES.split(','),
   hostName: new URL(process.env.APP_URL).hostname,
   hostScheme: process.env.NODE_ENV === 'production' ? 'https' : 'http',
   apiVersion: ApiVersion.January24,
-  isEmbeddedApp: false,
+  isEmbeddedApp: true,
   logger: {
     level: process.env.NODE_ENV === 'development' ? LogSeverity.Debug : LogSeverity.Error,
     httpRequests: process.env.NODE_ENV === 'development'

@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 name = "ai-support-bot"
-client_id = "your-client-id-here"
+client_id = "c710f5ecf7c575eb854fb911eb7cfd34"
 application_url = "https://ai-customerservice-production.up.railway.app"
 embedded = true
 
@@ -28,9 +28,6 @@ dev_store_url = "your-dev-store.myshopify.com"
 topics = ["orders/create", "orders/updated", "orders/paid", "orders/cancelled", "orders/fulfilled"]
 uri = "https://ai-customerservice-production.up.railway.app/webhooks/orders"
 
-[[webhooks.subscriptions]]
-topics = ["customers/create", "customers/update"]
-uri = "https://ai-customerservice-production.up.railway.app/webhooks/customers"
 
 [[webhooks.subscriptions]]
 topics = ["app/uninstalled"]

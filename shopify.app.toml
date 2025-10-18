@@ -14,6 +14,9 @@ redirect_urls = [
   "https://ai-customerservice-production.up.railway.app/auth/shopify/callback"
 ]
 
+[webhooks]
+api_version = "2023-10"
+
 [pos]
 embedded = false
 

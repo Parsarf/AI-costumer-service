@@ -3,6 +3,8 @@ const prisma = require('../lib/prisma');
 const { validateInput, validateSettings } = require('../middleware/validateInput');
 const logger = require('../utils/logger');
 
+// Force reload to fix plan field issue
+
 const router = express.Router();
 
 // Get shop settings

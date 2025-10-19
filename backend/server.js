@@ -184,15 +184,24 @@ app.get('/auth', async (req, res) => {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
-    const authRoute = await shopify.auth.begin({
-      shop: shop,
-      callbackPath: '/auth/callback',
-      isOnline: false,
-      rawRequest: req,
-      rawResponse: res
-    });
+    // Validate shop domain
+    if (!shop.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/)) {
+      return res.status(400).json({ error: 'Invalid shop domain' });
+    }
 
-    res.redirect(authRoute);
+    // Generate state for security
+    const crypto = require('crypto');
+    const state = crypto.randomBytes(16).toString('hex');
+
+    // Build authorization URL
+    const authUrl = `https://${shop}/admin/oauth/authorize?` +
+      `client_id=${process.env.SHOPIFY_API_KEY}&` +
+      `scope=${process.env.SCOPES}&` +
+      `redirect_uri=${process.env.APP_URL}/auth/callback&` +
+      `state=${state}`;
+
+    logger.info('Initiating OAuth flow', { shop, state });
+    res.redirect(authUrl);
   } catch (error) {
     logger.error('OAuth error:', error);
     res.status(500).json({ error: 'OAuth failed' });
@@ -201,30 +210,58 @@ app.get('/auth', async (req, res) => {
 
 app.get('/auth/callback', async (req, res) => {
   try {
-    const callbackResponse = await shopify.auth.callback({
-      rawRequest: req,
-      rawResponse: res
-    });
+    const { shop, code, state } = req.query;
 
-    const { session } = callbackResponse;
-    
+    if (!shop || !code) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    logger.info('Processing OAuth callback', { shop });
+
+    // Exchange authorization code for access token
+    const tokenResponse = await fetch(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          client_id: process.env.SHOPIFY_API_KEY,
+          client_secret: process.env.SHOPIFY_API_SECRET,
+          code
+        })
+      }
+    );
+
+    if (!tokenResponse.ok) {
+      throw new Error('Failed to exchange code for access token');
+    }
+
+    const { access_token } = await tokenResponse.json();
+
+    logger.info('Access token obtained', { shop });
+
     // Save shop to database
     await prisma.shop.upsert({
-      where: { shop: session.shop },
+      where: { shop },
       update: {
-        accessToken: session.accessToken,
-        isActive: true,
+        accessToken: access_token,
+        active: true,
         updatedAt: new Date()
       },
       create: {
-        shop: session.shop,
-        accessToken: session.accessToken,
-        isActive: true
+        shop,
+        accessToken: access_token,
+        active: true,
+        subscriptionTier: 'starter'
       }
     });
 
+    logger.info('Store created/updated', { shop });
+
     // Redirect to embedded app
-    res.redirect(`/app?shop=${session.shop}&host=${req.query.host}`);
+    res.redirect(`/app?shop=${shop}&host=${req.query.host}`);
   } catch (error) {
     logger.error('OAuth callback error:', error);
     res.status(500).json({ error: 'OAuth callback failed' });

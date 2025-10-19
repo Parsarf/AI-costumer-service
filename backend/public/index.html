@@ -125,7 +125,10 @@
                     shippingPolicy: 'Please contact support for shipping information.',
                     supportEmail: 'support@store.com',
                     botPersonality: 'friendly',
-                    primaryColor: '#4F46E5'
+                    theme: {
+                        primaryColor: '#4F46E5',
+                        position: 'bottom-right'
+                    }
                 });
                 const [saving, setSaving] = React.useState(false);
 
@@ -251,8 +254,14 @@
                             React.createElement('input', {
                                 className: 'input',
                                 type: 'color',
-                                value: settings.primaryColor,
-                                onChange: (e) => setSettings({...settings, primaryColor: e.target.value})
+                                value: settings.theme?.primaryColor || '#4F46E5',
+                                onChange: (e) => setSettings({
+                                    ...settings, 
+                                    theme: {
+                                        ...settings.theme,
+                                        primaryColor: e.target.value
+                                    }
+                                })
                             }),
                             React.createElement('div', { className: 'help-text' }, 'Primary color for the chat widget')
                         ),

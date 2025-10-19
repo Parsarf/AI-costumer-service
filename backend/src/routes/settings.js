@@ -60,13 +60,26 @@ router.put('/', validateInput, async (req, res) => {
       });
     }
 
+    // Get existing shop to merge settings
+    const existingShop = await prisma.shop.findUnique({
+      where: { shop },
+      select: { settings: true }
+    });
+
+    if (!existingShop) {
+      return res.status(404).json({ error: 'Shop not found' });
+    }
+
+    // Merge new settings with existing ones
+    const mergedSettings = {
+      ...existingShop.settings,
+      ...settings
+    };
+
     const updatedShop = await prisma.shop.update({
       where: { shop },
       data: { 
-        settings: {
-          ...settings,
-          updatedAt: new Date().toISOString()
-        }
+        settings: mergedSettings
       }
     });
 

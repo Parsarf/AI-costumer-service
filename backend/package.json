@@ -4,7 +4,7 @@
   "description": "AI-powered customer support bot for Shopify stores",
   "main": "server.js",
   "scripts": {
-    "start": "prisma generate && node server.js",
+    "start": "npx prisma generate && npx prisma db push && node server.js",
     "dev": "nodemon server.js",
     "build": "echo 'No build step required'",
     "prisma:generate": "prisma generate",

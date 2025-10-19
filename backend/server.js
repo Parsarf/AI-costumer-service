@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 const { shopify } = require('./src/lib/shopify');
 const prisma = require('./src/lib/prisma');
 const logger = require('./src/utils/logger');
@@ -227,7 +228,6 @@ app.get('/auth', async (req, res) => {
     }
 
     // Generate state for security
-    const crypto = require('crypto');
     const state = crypto.randomBytes(16).toString('hex');
 
     // Build authorization URL

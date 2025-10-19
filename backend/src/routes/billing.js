@@ -100,7 +100,8 @@ router.get('/callback', async (req, res) => {
       await prisma.shop.update({
         where: { shop },
         data: { 
-          plan: 'paid',
+          subscriptionTier: 'pro',
+          subscriptionStatus: 'active',
           updatedAt: new Date()
         }
       });
@@ -154,7 +155,8 @@ router.post('/cancel', async (req, res) => {
     await prisma.shop.update({
       where: { shop },
       data: { 
-        plan: 'free',
+        subscriptionTier: 'starter',
+        subscriptionStatus: 'cancelled',
         updatedAt: new Date()
       }
     });

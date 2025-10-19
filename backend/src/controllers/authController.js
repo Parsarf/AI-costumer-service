@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { shopify } = require('../lib/shopify');
 const prisma = require('../lib/prisma');
 const { getShopInfo } = require('../services/shopifyService');
@@ -22,12 +23,12 @@ async function initiateAuth(req, res) {
     }
 
     // Generate nonce for security
-    const state = require('crypto').randomBytes(16).toString('hex');
+    const state = crypto.randomBytes(16).toString('hex');
 
     // Build authorization URL
     const authUrl = `https://${shop}/admin/oauth/authorize?` +
       `client_id=${process.env.SHOPIFY_API_KEY}&` +
-      `scope=${process.env.SHOPIFY_SCOPES}&` +
+      `scope=${process.env.SCOPES}&` +
       `redirect_uri=${process.env.APP_URL}/auth/callback&` +
       `state=${state}`;
 
@@ -96,7 +97,7 @@ async function handleCallback(req, res) {
         shop,
         accessToken: access_token,
         isActive: true,
-        plan: 'free',
+        subscriptionTier: 'starter',
         settings: {
           storeName: shopInfo?.name || shop.split('.')[0],
           welcomeMessage: 'Hi! How can I help you today?',

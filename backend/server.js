@@ -119,6 +119,42 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Temporary endpoint to manually create shop for testing
+app.post('/api/test/create-shop', async (req, res) => {
+  try {
+    const { shop, accessToken } = req.body;
+    
+    if (!shop || !accessToken) {
+      return res.status(400).json({ error: 'Missing shop or accessToken' });
+    }
+
+    // Create shop in database
+    const store = await prisma.shop.upsert({
+      where: { shop },
+      update: {
+        accessToken,
+        active: true,
+        updatedAt: new Date()
+      },
+      create: {
+        shop,
+        accessToken,
+        active: true,
+        subscriptionTier: 'starter'
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Shop created successfully',
+      shop: store.shop
+    });
+  } catch (error) {
+    logger.error('Error creating shop:', error);
+    res.status(500).json({ error: 'Failed to create shop' });
+  }
+});
+
 app.get('/ready', async (req, res) => {
   try {
     const checks = {

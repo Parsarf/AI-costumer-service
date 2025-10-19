@@ -120,6 +120,7 @@ app.get('/health', (req, res) => {
 });
 
 // Temporary endpoint to manually create shop for testing
+// Force redeploy to fix plan field issue
 app.post('/api/test/create-shop', async (req, res) => {
   try {
     const { shop, accessToken } = req.body;

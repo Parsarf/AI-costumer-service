@@ -213,7 +213,7 @@ app.get('/ready', async (req, res) => {
   }
 });
 
-// OAuth routes are handled by the auth controller
+// OAuth routes are handled by the auth controller (crypto fix applied)
 app.use('/auth', require('./src/routes/auth'));
 
 // Root route - redirect to app with shop parameter

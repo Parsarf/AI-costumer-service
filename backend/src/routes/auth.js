@@ -11,7 +11,7 @@ router.use(authLimiter);
 router.get('/', initiateAuth);
 
 // GET /auth/callback?code=xxx&shop=xxx&state=xxx&hmac=xxx
-router.get('/callback', verifyShopifyOAuth, handleCallback);
+router.get('/callback', handleCallback);
 
 // GET /auth/verify?shop=example.myshopify.com
 router.get('/verify', verifyAuth);

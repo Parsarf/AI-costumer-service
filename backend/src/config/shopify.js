@@ -2,10 +2,10 @@ const { shopifyApi, ApiVersion, LogSeverity } = require('@shopify/shopify-api');
 
 // Initialize Shopify API client
 const shopify = shopifyApi({
-  apiKey: process.env.SHOPIFY_API_KEY,
-  apiSecretKey: process.env.SHOPIFY_API_SECRET,
-  scopes: process.env.SCOPES.split(','),
-  hostName: new URL(process.env.APP_URL).hostname,
+  apiKey: process.env.SHOPIFY_API_KEY || 'placeholder_key',
+  apiSecretKey: process.env.SHOPIFY_API_SECRET || 'placeholder_secret',
+  scopes: process.env.SCOPES ? process.env.SCOPES.split(',') : ['read_products', 'read_orders', 'read_customers', 'write_themes'],
+  hostName: process.env.APP_URL ? new URL(process.env.APP_URL).hostname : 'localhost',
   hostScheme: process.env.NODE_ENV === 'production' ? 'https' : 'http',
   apiVersion: ApiVersion.January24,
   isEmbeddedApp: true,

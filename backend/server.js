@@ -213,97 +213,8 @@ app.get('/ready', async (req, res) => {
   }
 });
 
-// OAuth routes
-app.get('/auth', async (req, res) => {
-  try {
-    const { shop } = req.query;
-    
-    if (!shop) {
-      return res.status(400).json({ error: 'Missing shop parameter' });
-    }
-
-    // Validate shop domain
-    if (!shop.match(/^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/)) {
-      return res.status(400).json({ error: 'Invalid shop domain' });
-    }
-
-    // Generate state for security
-    const state = crypto.randomBytes(16).toString('hex');
-
-    // Build authorization URL
-    const authUrl = `https://${shop}/admin/oauth/authorize?` +
-      `client_id=${process.env.SHOPIFY_API_KEY}&` +
-      `scope=${process.env.SCOPES}&` +
-      `redirect_uri=${process.env.APP_URL}/auth/callback&` +
-      `state=${state}`;
-
-    logger.info('Initiating OAuth flow', { shop, state });
-    res.redirect(authUrl);
-  } catch (error) {
-    logger.error('OAuth error:', error);
-    res.status(500).json({ error: 'OAuth failed' });
-  }
-});
-
-app.get('/auth/callback', async (req, res) => {
-  try {
-    const { shop, code, state } = req.query;
-
-    if (!shop || !code) {
-      return res.status(400).json({ error: 'Missing required parameters' });
-    }
-
-    logger.info('Processing OAuth callback', { shop });
-
-    // Exchange authorization code for access token
-    const tokenResponse = await fetch(
-      `https://${shop}/admin/oauth/access_token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          client_id: process.env.SHOPIFY_API_KEY,
-          client_secret: process.env.SHOPIFY_API_SECRET,
-          code
-        })
-      }
-    );
-
-    if (!tokenResponse.ok) {
-      throw new Error('Failed to exchange code for access token');
-    }
-
-    const { access_token } = await tokenResponse.json();
-
-    logger.info('Access token obtained', { shop });
-
-    // Save shop to database
-    await prisma.shop.upsert({
-      where: { shop },
-      update: {
-        accessToken: access_token,
-        active: true,
-        updatedAt: new Date()
-      },
-      create: {
-        shop,
-        accessToken: access_token,
-        active: true,
-        subscriptionTier: 'starter'
-      }
-    });
-
-    logger.info('Store created/updated', { shop });
-
-    // Redirect to embedded app
-    res.redirect(`/app?shop=${shop}&host=${req.query.host}`);
-  } catch (error) {
-    logger.error('OAuth callback error:', error);
-    res.status(500).json({ error: 'OAuth callback failed' });
-  }
-});
+// OAuth routes are handled by the auth controller
+app.use('/auth', require('./src/routes/auth'));
 
 // Root route - redirect to app with shop parameter
 app.get('/', async (req, res) => {
@@ -423,22 +334,40 @@ app.use((err, req, res, next) => {
 // Start server
 async function startServer() {
   try {
-    // Validate environment variables
-    const { validateEnvironment } = require('./src/config/validateEnv');
-    validateEnvironment();
-
-    // Test database connection
-    await prisma.$connect();
-    logger.info('Database connected successfully');
+    // Log environment status
+    logger.info('Starting server...');
+    logger.info(`Environment: ${process.env.NODE_ENV}`);
+    logger.info(`Port: ${PORT}`);
     
-    // Initialize database tables
-    await initializeDatabase();
-    logger.info('Database tables initialized successfully');
+    // Check critical environment variables
+    const criticalVars = ['SHOPIFY_API_KEY', 'SHOPIFY_API_SECRET', 'APP_URL'];
+    const missingVars = criticalVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      logger.warn(`Missing critical environment variables: ${missingVars.join(', ')}`);
+      logger.warn('Server will start but OAuth may not work properly');
+    }
+
+    // Test database connection if DATABASE_URL is available
+    if (process.env.DATABASE_URL) {
+      try {
+        await prisma.$connect();
+        logger.info('Database connected successfully');
+        
+        // Initialize database tables
+        await initializeDatabase();
+        logger.info('Database tables initialized successfully');
+      } catch (dbError) {
+        logger.error('Database connection failed:', dbError);
+        logger.warn('Server will start without database connection');
+      }
+    } else {
+      logger.warn('DATABASE_URL not set - database features will be unavailable');
+    }
     
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Shopify AI Support Bot running on port ${PORT}`);
-      logger.info(`Environment: ${process.env.NODE_ENV}`);
-      logger.info(`App URL: ${process.env.HOST || 'https://ai-customerservice-production.up.railway.app'}`);
+      logger.info(`App URL: ${process.env.APP_URL || 'https://ai-customerservice-production.up.railway.app'}`);
     });
 
     // Graceful shutdown handling

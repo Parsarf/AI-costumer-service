@@ -1,9 +1,20 @@
 const OpenAI = require('openai');
 const logger = require('../utils/logger');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Initialize OpenAI with fallback for missing API key
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  try {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+    logger.info('OpenAI service initialized successfully');
+  } catch (error) {
+    logger.error('Failed to initialize OpenAI:', error);
+  }
+} else {
+  logger.warn('OPENAI_API_KEY not set - AI features will be unavailable');
+}
 
 const OPENAI_MODEL = 'gpt-4-turbo-preview';
 const MAX_TOKENS = 1024;
@@ -91,6 +102,17 @@ async function sendMessage(messages, systemPrompt, options = {}) {
   const startTime = Date.now();
   
   try {
+    // Check if OpenAI client is available
+    if (!openai) {
+      logger.warn('OpenAI client not available - returning fallback response');
+      return {
+        success: false,
+        message: 'AI service is currently unavailable. Please contact support directly.',
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+        responseTime: Date.now() - startTime
+      };
+    }
+
     logger.info('Sending request to OpenAI API', {
       messageCount: messages.length,
       model: OPENAI_MODEL

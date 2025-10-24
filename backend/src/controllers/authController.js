@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const { shopify } = require('../lib/shopify');
 const prisma = require('../lib/prisma');
 const { getShopInfo } = require('../services/shopifyService');

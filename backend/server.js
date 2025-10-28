@@ -121,7 +121,8 @@ app.get('/health', (req, res) => {
 });
 
 // Temporary endpoint to manually create shop for testing
-// Force redeploy to fix plan field issue
+// Force redeploy to fix plan field issue - Railway deployment fix
+// Updated: Fixed Prisma schema mismatch - using subscriptionTier instead of plan
 app.post('/api/test/create-shop', async (req, res) => {
   try {
     const { shop, accessToken } = req.body;

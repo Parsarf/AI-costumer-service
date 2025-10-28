@@ -17,6 +17,7 @@ model Shop {
   storeName             String?
   settings              Json?    @default("{\"welcomeMessage\":\"Hi! 👋 I'm here to help you with any questions about your order, returns, or our products. How can I assist you today?\",\"returnPolicy\":\"We accept returns within 30 days of purchase. Items must be unworn and in original packaging.\",\"shippingPolicy\":\"We ship within 1-2 business days. Domestic orders typically arrive in 3-5 business days.\",\"supportEmail\":\"support@example.com\",\"botPersonality\":\"friendly\",\"chatbotEnabled\":true,\"theme\":{\"primaryColor\":\"#4F46E5\",\"position\":\"bottom-right\"}}")
   active                Boolean  @default(true)
+  plan                  String?  @default("starter") // Added missing plan field
   subscriptionTier      String   @default("starter")
   subscriptionStatus    String   @default("trial")
   chargeId              String?

@@ -22,6 +22,7 @@ router.get('/', async (req, res) => {
       where: { shop },
       select: {
         shop: true,
+        plan: true,
         subscriptionTier: true,
         settings: true,
         active: true,
@@ -30,7 +31,33 @@ router.get('/', async (req, res) => {
     });
 
     if (!shopData) {
-      return res.status(404).json({ error: 'Shop not found' });
+      // Create shop if it doesn't exist
+      logger.info('Shop not found, creating new shop', { shop });
+      const newShop = await prisma.shop.create({
+        data: {
+          shop,
+          accessToken: 'temp_token', // Will be updated during OAuth
+          active: true,
+          plan: 'starter',
+          subscriptionTier: 'starter',
+          settings: {
+            welcomeMessage: 'Hi! How can I help you today?',
+            returnPolicy: 'Please contact support for return information.',
+            shippingPolicy: 'Please contact support for shipping information.',
+            supportEmail: 'support@store.com',
+            botPersonality: 'friendly'
+          }
+        },
+        select: {
+          shop: true,
+          plan: true,
+          subscriptionTier: true,
+          settings: true,
+          active: true,
+          createdAt: true
+        }
+      });
+      return res.json(newShop);
     }
 
     res.json(shopData);
@@ -71,7 +98,22 @@ router.put('/', validateInput, async (req, res) => {
     });
 
     if (!existingShop) {
-      return res.status(404).json({ error: 'Shop not found' });
+      // Create shop if it doesn't exist
+      logger.info('Shop not found during update, creating new shop', { shop });
+      const newShop = await prisma.shop.create({
+        data: {
+          shop,
+          accessToken: 'temp_token', // Will be updated during OAuth
+          active: true,
+          plan: 'starter',
+          subscriptionTier: 'starter',
+          settings: settings
+        }
+      });
+      return res.json({
+        success: true,
+        settings: newShop.settings
+      });
     }
 
     // Merge new settings with existing ones

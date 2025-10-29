@@ -123,6 +123,7 @@ app.get('/health', (req, res) => {
 // Temporary endpoint to manually create shop for testing
 // Force redeploy to fix plan field issue - Railway deployment fix
 // Updated: Fixed Prisma schema mismatch - using subscriptionTier instead of plan
+// Added: Database migration to add plan field to stores table
 app.post('/api/test/create-shop', async (req, res) => {
   try {
     const { shop, accessToken } = req.body;
@@ -354,6 +355,12 @@ async function startServer() {
       try {
         await prisma.$connect();
         logger.info('Database connected successfully');
+        
+        // Run migrations first
+        logger.info('🔄 Running database migrations...');
+        const { runMigrations } = require('./migrations/run');
+        await runMigrations();
+        logger.info('✅ Database migrations completed');
         
         // Initialize database tables
         await initializeDatabase();

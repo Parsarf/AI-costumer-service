@@ -166,7 +166,7 @@ async function sendMessage(messages, systemPrompt, options = {}) {
  */
 function formatMessages(messageHistory) {
   return messageHistory.map(msg => ({
-    role: msg.role === 'assistant' ? 'assistant' : 'user',
+    role: msg.role,
     content: msg.content
   }));
 }

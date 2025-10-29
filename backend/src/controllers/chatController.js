@@ -67,12 +67,15 @@ async function handleChatMessage(req, res) {
       if (orderData) {
         logger.info('Order found', { orderNumber, orderId: orderData.id });
         // Save order number to conversation metadata
-        conversation.metadata = {
+        const updatedMetadata = {
           ...conversation.metadata,
           orderNumber,
           orderId: orderData.id
         };
-        await conversation.save();
+        await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { metadata: updatedMetadata }
+        });
       }
     }
 

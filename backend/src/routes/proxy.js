@@ -71,6 +71,9 @@ router.post('/chat', verifyAppProxy, validateBilling, async (req, res) => {
     const formattedMessages = formatMessages(messages.map(m => ({
       role: m.role,
       content: m.content
+    })));(messages.map(m => ({
+      role: m.role,
+      content: m.content
     })));
 
     // Get OpenAI response

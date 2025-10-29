@@ -125,13 +125,16 @@ async function handleCallback(req, res) {
           where: { shop },
           update: {
             accessToken: access_token,
+            active: true,
             isActive: true,
             updatedAt: new Date()
           },
           create: {
             shop,
             accessToken: access_token,
+            active: true,
             isActive: true,
+            plan: 'starter',
             subscriptionTier: 'starter',
             settings: {
               storeName: shopInfo?.name || shop.split('.')[0],

@@ -26,6 +26,7 @@ router.get('/', async (req, res) => {
         subscriptionTier: true,
         settings: true,
         active: true,
+        isActive: true,
         createdAt: true
       }
     });
@@ -38,6 +39,7 @@ router.get('/', async (req, res) => {
           shop,
           accessToken: 'temp_token', // Will be updated during OAuth
           active: true,
+          isActive: true,
           plan: 'starter',
           subscriptionTier: 'starter',
           settings: {
@@ -54,6 +56,7 @@ router.get('/', async (req, res) => {
           subscriptionTier: true,
           settings: true,
           active: true,
+          isActive: true,
           createdAt: true
         }
       });
@@ -105,6 +108,7 @@ router.put('/', validateInput, async (req, res) => {
           shop,
           accessToken: 'temp_token', // Will be updated during OAuth
           active: true,
+          isActive: true,
           plan: 'starter',
           subscriptionTier: 'starter',
           settings: settings

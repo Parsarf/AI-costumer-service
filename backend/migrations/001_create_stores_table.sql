@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS stores (
     }
   }'::jsonb,
   active BOOLEAN DEFAULT TRUE,
+  is_active BOOLEAN DEFAULT TRUE,
+  plan VARCHAR(50) DEFAULT 'starter',
   subscription_tier VARCHAR(50) DEFAULT 'starter',
   subscription_status VARCHAR(50) DEFAULT 'trial',
   charge_id VARCHAR(255),

@@ -51,8 +51,17 @@ async function runMigrations() {
         const migrationPath = path.join(migrationsDir, filename);
         const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
-        // Execute migration
-        await prisma.$executeRawUnsafe(migrationSQL);
+        // Split migration into individual statements and execute them
+        const statements = migrationSQL
+          .split(';')
+          .map(stmt => stmt.trim())
+          .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+        
+        for (const statement of statements) {
+          if (statement.trim()) {
+            await prisma.$executeRawUnsafe(statement);
+          }
+        }
 
         // Record migration as executed
         await prisma.$executeRaw`

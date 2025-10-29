@@ -1,4 +1,4 @@
-const Store = require('../models/Store');
+const prisma = require('../lib/prisma');
 const { getOrCreateConversation, saveMessage, getConversationHistory } = require('../services/conversationService');
 const { buildSystemPrompt, sendMessage, formatMessages } = require('../services/openaiService');
 const { fetchOrderInfo, fetchProductInfo } = require('../services/shopifyService');
@@ -25,14 +25,16 @@ async function handleChatMessage(req, res) {
     logger.info('Processing chat message', { shop, conversationId, messageLength: message.length });
 
     // Find store
-    const store = await Store.findOne({ where: { shop, active: true } });
+    const store = await prisma.shop.findUnique({ 
+      where: { shop, isActive: true } 
+    });
     
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
 
     // Check if store can send messages (subscription limits)
-    if (!store.canSendMessage()) {
+    if (store.conversationCount >= store.conversationLimit) {
       return res.status(403).json({ 
         error: 'Conversation limit reached',
         message: 'Your conversation limit has been reached. Please upgrade your plan.'
@@ -139,7 +141,11 @@ async function handleChatMessage(req, res) {
 
     // Increment conversation count if this is a new conversation
     if (!conversationId || conversation.messageCount <= 2) {
-      await store.incrementConversationCount();
+      // Increment conversation count
+      await prisma.shop.update({
+        where: { id: store.id },
+        data: { conversationCount: { increment: 1 } }
+      });
     }
 
     const totalTime = Date.now() - startTime;
@@ -189,7 +195,7 @@ async function getConversation(req, res) {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
-    const store = await Store.findOne({ where: { shop } });
+    const store = await prisma.shop.findUnique({ where: { shop } });
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
@@ -228,7 +234,9 @@ async function getWelcomeMessage(req, res) {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
-    const store = await Store.findOne({ where: { shop, active: true } });
+    const store = await prisma.shop.findUnique({ 
+      where: { shop, isActive: true } 
+    });
     
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });

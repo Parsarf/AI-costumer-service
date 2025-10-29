@@ -26,15 +26,6 @@ function errorHandler(err, req, res, next) {
   } else if (err.name === 'UnauthorizedError') {
     status = 401;
     message = 'Unauthorized';
-  } else if (err.name === 'SequelizeValidationError') {
-    status = 400;
-    message = 'Database validation error: ' + err.errors.map(e => e.message).join(', ');
-  } else if (err.name === 'SequelizeUniqueConstraintError') {
-    status = 409;
-    message = 'Resource already exists';
-  } else if (err.name === 'SequelizeDatabaseError') {
-    status = 500;
-    message = 'Database error';
   }
 
   // Don't expose internal errors in production

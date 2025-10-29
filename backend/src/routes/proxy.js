@@ -38,20 +38,27 @@ router.post('/chat', verifyAppProxy, validateBilling, async (req, res) => {
     if (!conversation) {
       conversation = await prisma.conversation.create({
         data: {
-          shop: shop,
-          prompt: message,
-          shopId: shopData.id
+          shopId: shopData.id,
+          customerEmail: null,
+          customerName: null,
+          status: 'active'
+        }
+      });
+
+      // Create the first message
+      await prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          role: 'user',
+          content: message
         }
       });
     }
 
-    // Get conversation history
-    const history = await prisma.conversation.findMany({
+    // Get conversation history from messages
+    const messages = await prisma.message.findMany({
       where: { 
-        shop: shop,
-        createdAt: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-        }
+        conversationId: conversation.id
       },
       orderBy: { createdAt: 'asc' },
       take: 10
@@ -60,20 +67,26 @@ router.post('/chat', verifyAppProxy, validateBilling, async (req, res) => {
     // Build system prompt
     const systemPrompt = buildSystemPrompt(shopData.settings || {});
 
-    // Format messages for Claude
-    const messages = formatMessages([
-      ...history.map(h => ({ role: 'user', content: h.prompt })),
-      ...history.filter(h => h.reply).map(h => ({ role: 'assistant', content: h.reply })),
-      { role: 'user', content: message }
-    ]);
+    // Format messages for OpenAI
+    const formattedMessages = formatMessages(messages.map(m => ({
+      role: m.role,
+      content: m.content
+    })));
 
     // Get OpenAI response
-    const aiResponse = await sendMessage(messages, systemPrompt);
+    const aiResponse = await sendMessage(formattedMessages, systemPrompt);
 
-    // Save conversation
-    await prisma.conversation.update({
-      where: { id: conversation.id },
-      data: { reply: aiResponse.content }
+    // Save AI response message
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        role: 'assistant',
+        content: aiResponse.content,
+        metadata: {
+          usage: aiResponse.usage,
+          responseTime: aiResponse.responseTime
+        }
+      }
     });
 
     res.json({

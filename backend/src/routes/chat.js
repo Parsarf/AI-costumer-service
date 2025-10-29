@@ -20,8 +20,8 @@ router.post('/', chatLimiter, validateInput, validateBilling, async (req, res) =
     }
 
     // Get shop settings
-    const shopData = await prisma.shop.findFirst({
-      where: { shopifyDomain: shop }
+    const shopData = await prisma.shop.findUnique({
+      where: { shop }
     });
 
     if (!shopData) {

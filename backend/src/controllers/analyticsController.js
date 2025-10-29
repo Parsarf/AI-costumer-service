@@ -1,4 +1,4 @@
-const Store = require('../models/Store');
+const prisma = require('../lib/prisma');
 const { getConversationAnalytics, getShopConversations } = require('../services/conversationService');
 const logger = require('../utils/logger');
 
@@ -11,7 +11,7 @@ async function getAnalytics(req, res) {
     const { shop } = req.params;
     const { startDate, endDate } = req.query;
 
-    const store = await Store.findOne({ where: { shop } });
+    const store = await prisma.shop.findUnique({ where: { shop } });
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
@@ -53,7 +53,7 @@ async function getConversations(req, res) {
     const { shop } = req.params;
     const { status, escalated, limit = 50, offset = 0 } = req.query;
 
-    const store = await Store.findOne({ where: { shop } });
+    const store = await prisma.shop.findUnique({ where: { shop } });
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
@@ -97,7 +97,7 @@ async function getDashboardSummary(req, res) {
   try {
     const { shop } = req.params;
 
-    const store = await Store.findOne({ where: { shop } });
+    const store = await prisma.shop.findUnique({ where: { shop } });
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }

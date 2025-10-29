@@ -1,6 +1,4 @@
-const Conversation = require('../models/Conversation');
-const Message = require('../models/Message');
-const Store = require('../models/Store');
+const prisma = require('../lib/prisma');
 const logger = require('../utils/logger');
 
 /**
@@ -8,13 +6,15 @@ const logger = require('../utils/logger');
  */
 async function createConversation(shopId, customerData = {}) {
   try {
-    const conversation = await Conversation.create({
-      shopId,
-      customerEmail: customerData.email,
-      customerName: customerData.name,
-      customerId: customerData.id,
-      sessionId: customerData.sessionId,
-      status: 'active'
+    const conversation = await prisma.conversation.create({
+      data: {
+        shopId,
+        customerEmail: customerData.email,
+        customerName: customerData.name,
+        customerId: customerData.id,
+        sessionId: customerData.sessionId,
+        status: 'active'
+      }
     });
 
     logger.info('Created new conversation', { 
@@ -30,7 +30,7 @@ async function createConversation(shopId, customerData = {}) {
 }
 
 /**
- * Get conversation by ID with messages
+ * Get conversation by ID
  */
 async function getConversation(conversationId, includeMessages = true) {
   try {
@@ -39,18 +39,18 @@ async function getConversation(conversationId, includeMessages = true) {
     };
 
     if (includeMessages) {
-      options.include = [{
-        model: Message,
-        as: 'messages',
-        order: [['created_at', 'ASC']]
-      }];
+      options.include = {
+        messages: {
+          orderBy: { createdAt: 'asc' }
+        }
+      };
     }
 
-    const conversation = await Conversation.findOne(options);
+    const conversation = await prisma.conversation.findUnique(options);
     return conversation;
   } catch (error) {
-    logger.error('Error fetching conversation:', error);
-    return null;
+    logger.error('Error getting conversation:', error);
+    throw error;
   }
 }
 
@@ -59,36 +59,37 @@ async function getConversation(conversationId, includeMessages = true) {
  */
 async function getOrCreateConversation(conversationId, shopId, customerData) {
   if (conversationId) {
-    const existing = await getConversation(conversationId);
-    if (existing) {
-      return existing;
+    const conversation = await getConversation(conversationId);
+    if (conversation && conversation.shopId === shopId) {
+      return conversation;
     }
   }
 
-  // Create new conversation
   return await createConversation(shopId, customerData);
 }
 
 /**
- * Save message to conversation
+ * Save a message to conversation
  */
 async function saveMessage(conversationId, role, content, metadata = {}) {
   try {
-    const message = await Message.create({
-      conversationId,
-      role,
-      content,
-      metadata,
-      tokens: metadata.tokens,
-      responseTime: metadata.responseTime,
-      aiModel: metadata.model
+    const message = await prisma.message.create({
+      data: {
+        conversationId,
+        role,
+        content,
+        metadata
+      }
     });
 
-    // Update conversation
-    const conversation = await Conversation.findByPk(conversationId);
-    if (conversation) {
-      await conversation.incrementMessageCount();
-    }
+    // Update conversation message count and last message time
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        messageCount: { increment: 1 },
+        lastMessageAt: new Date()
+      }
+    });
 
     return message;
   } catch (error) {
@@ -98,29 +99,29 @@ async function saveMessage(conversationId, role, content, metadata = {}) {
 }
 
 /**
- * Get conversation history formatted for OpenAI
+ * Get conversation history
  */
 async function getConversationHistory(conversationId, limit = 20) {
   try {
-    const messages = await Message.findAll({
-      where: { conversationId },
-      order: [['created_at', 'ASC']],
-      limit,
-      attributes: ['role', 'content', 'created_at']
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          take: limit
+        }
+      }
     });
 
-    return messages.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
+    return conversation?.messages || [];
   } catch (error) {
-    logger.error('Error fetching conversation history:', error);
-    return [];
+    logger.error('Error getting conversation history:', error);
+    throw error;
   }
 }
 
 /**
- * Get conversations for a shop with filters
+ * Get conversations for a shop
  */
 async function getShopConversations(shopId, filters = {}) {
   try {
@@ -134,104 +135,110 @@ async function getShopConversations(shopId, filters = {}) {
       where.escalated = filters.escalated;
     }
 
-    const conversations = await Conversation.findAll({
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) {
+        where.createdAt.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        where.createdAt.lte = new Date(filters.endDate);
+      }
+    }
+
+    const conversations = await prisma.conversation.findMany({
       where,
-      include: [{
-        model: Message,
-        as: 'messages',
-        limit: 1,
-        order: [['created_at', 'DESC']],
-        attributes: ['content', 'created_at', 'role']
-      }],
-      order: [['last_message_at', 'DESC']],
-      limit: filters.limit || 50,
-      offset: filters.offset || 0
+      include: {
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      },
+      orderBy: { lastMessageAt: 'desc' },
+      take: filters.limit || 50
     });
 
     return conversations;
   } catch (error) {
-    logger.error('Error fetching shop conversations:', error);
-    return [];
-  }
-}
-
-/**
- * Get conversation analytics
- */
-async function getConversationAnalytics(shopId, dateRange = {}) {
-  try {
-    const where = { shopId };
-
-    if (dateRange.startDate && dateRange.endDate) {
-      where.createdAt = {
-        [require('sequelize').Op.between]: [dateRange.startDate, dateRange.endDate]
-      };
-    }
-
-    const conversations = await Conversation.findAll({
-      where,
-      include: [{
-        model: Message,
-        as: 'messages'
-      }]
-    });
-
-    // Calculate analytics
-    const total = conversations.length;
-    const escalated = conversations.filter(c => c.escalated).length;
-    const resolved = conversations.filter(c => c.status === 'resolved').length;
-    
-    const totalMessages = conversations.reduce((sum, c) => sum + c.messageCount, 0);
-    const avgMessagesPerConvo = total > 0 ? (totalMessages / total).toFixed(2) : 0;
-
-    const avgResponseTime = conversations.reduce((sum, c) => {
-      const messages = c.messages || [];
-      const assistantMessages = messages.filter(m => m.role === 'assistant');
-      const totalTime = assistantMessages.reduce((s, m) => s + (m.responseTime || 0), 0);
-      return sum + totalTime;
-    }, 0) / Math.max(totalMessages, 1);
-
-    return {
-      totalConversations: total,
-      escalatedConversations: escalated,
-      resolvedConversations: resolved,
-      activeConversations: total - resolved,
-      escalationRate: total > 0 ? ((escalated / total) * 100).toFixed(2) : 0,
-      resolutionRate: total > 0 ? ((resolved / total) * 100).toFixed(2) : 0,
-      avgMessagesPerConversation: avgMessagesPerConvo,
-      avgResponseTime: Math.round(avgResponseTime)
-    };
-  } catch (error) {
-    logger.error('Error calculating analytics:', error);
+    logger.error('Error getting shop conversations:', error);
     throw error;
   }
 }
 
 /**
- * Close inactive conversations
+ * Get conversation analytics for a shop
  */
-async function closeInactiveConversations(hoursInactive = 24) {
+async function getConversationAnalytics(shopId, dateRange = {}) {
   try {
-    const cutoffTime = new Date(Date.now() - (hoursInactive * 60 * 60 * 1000));
-    
-    const { Op } = require('sequelize');
-    const result = await Conversation.update(
-      { status: 'closed' },
-      {
-        where: {
-          status: 'active',
-          lastMessageAt: {
-            [Op.lt]: cutoffTime
-          }
-        }
-      }
-    );
+    const where = { shopId };
 
-    logger.info(`Closed ${result[0]} inactive conversations`);
-    return result[0];
+    if (dateRange.startDate || dateRange.endDate) {
+      where.createdAt = {};
+      if (dateRange.startDate) {
+        where.createdAt.gte = new Date(dateRange.startDate);
+      }
+      if (dateRange.endDate) {
+        where.createdAt.lte = new Date(dateRange.endDate);
+      }
+    }
+
+    const conversations = await prisma.conversation.findMany({
+      where,
+      include: {
+        messages: true
+      }
+    });
+
+    const analytics = {
+      totalConversations: conversations.length,
+      activeConversations: conversations.filter(c => c.status === 'active').length,
+      escalatedConversations: conversations.filter(c => c.escalated).length,
+      resolvedConversations: conversations.filter(c => c.status === 'resolved').length,
+      totalMessages: conversations.reduce((sum, c) => sum + c.messageCount, 0),
+      averageMessagesPerConversation: conversations.length > 0 
+        ? conversations.reduce((sum, c) => sum + c.messageCount, 0) / conversations.length 
+        : 0,
+      averageResponseTime: 0, // This would need to be calculated from message timestamps
+      escalationRate: conversations.length > 0 
+        ? conversations.filter(c => c.escalated).length / conversations.length 
+        : 0
+    };
+
+    return analytics;
   } catch (error) {
-    logger.error('Error closing inactive conversations:', error);
-    return 0;
+    logger.error('Error getting conversation analytics:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update conversation status
+ */
+async function updateConversationStatus(conversationId, status, metadata = {}) {
+  try {
+    const updateData = { status };
+
+    if (status === 'resolved') {
+      updateData.resolvedAt = new Date();
+    }
+
+    if (Object.keys(metadata).length > 0) {
+      updateData.metadata = metadata;
+    }
+
+    const result = await prisma.conversation.update({
+      where: { id: conversationId },
+      data: updateData
+    });
+
+    logger.info('Updated conversation status', { 
+      conversationId, 
+      status 
+    });
+
+    return result;
+  } catch (error) {
+    logger.error('Error updating conversation status:', error);
+    throw error;
   }
 }
 
@@ -243,6 +250,5 @@ module.exports = {
   getConversationHistory,
   getShopConversations,
   getConversationAnalytics,
-  closeInactiveConversations
+  updateConversationStatus
 };
-

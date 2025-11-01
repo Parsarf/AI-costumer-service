@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS stores (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Add columns if they don't exist (for existing tables)
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'starter';
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR(50) DEFAULT 'starter';
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'trial';
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_stores_shop ON stores(shop);
 CREATE INDEX IF NOT EXISTS idx_stores_active ON stores(active);

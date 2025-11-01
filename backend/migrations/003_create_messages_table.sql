@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS messages (
   metadata JSONB DEFAULT '{}'::jsonb,
   tokens INTEGER,
   response_time INTEGER,
-  claude_model VARCHAR(100),
+  ai_model VARCHAR(100),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

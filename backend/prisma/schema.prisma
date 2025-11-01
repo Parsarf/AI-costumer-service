@@ -13,25 +13,25 @@ datasource db {
 model Shop {
   id                    Int      @id @default(autoincrement())
   shop                  String   @unique
-  accessToken           String
-  storeName             String?
+  accessToken           String   @map("access_token")
+  storeName             String?  @map("store_name")
   settings              Json?    @default("{\"welcomeMessage\":\"Hi! 👋 I'm here to help you with any questions about your order, returns, or our products. How can I assist you today?\",\"returnPolicy\":\"We accept returns within 30 days of purchase. Items must be unworn and in original packaging.\",\"shippingPolicy\":\"We ship within 1-2 business days. Domestic orders typically arrive in 3-5 business days.\",\"supportEmail\":\"support@example.com\",\"botPersonality\":\"friendly\",\"chatbotEnabled\":true,\"theme\":{\"primaryColor\":\"#4F46E5\",\"position\":\"bottom-right\"}}")
   active                Boolean  @default(true)
-  isActive              Boolean  @default(true)  // Added missing isActive field
-  plan                  String?  @default("starter") // Added missing plan field
-  subscriptionTier      String   @default("starter")
-  subscriptionStatus    String   @default("trial")
-  chargeId              String?
-  conversationCount     Int      @default(0)
-  conversationLimit     Int      @default(1000)
-  installedAt           DateTime @default(now())
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  isActive              Boolean  @default(true) @map("is_active")
+  plan                  String?  @default("starter")
+  subscriptionTier      String   @default("starter") @map("subscription_tier")
+  subscriptionStatus    String   @default("trial") @map("subscription_status")
+  chargeId              String?  @map("charge_id")
+  conversationCount     Int      @default(0) @map("conversation_count")
+  conversationLimit     Int      @default(1000) @map("conversation_limit")
+  installedAt           DateTime @default(now()) @map("installed_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
   conversations Conversation[]
   sessions      Session[]
   billingSubscription BillingSubscription?
-  
+
   @@map("stores")
 }
 
@@ -39,73 +39,73 @@ model Session {
   id        String   @id
   shop      String
   state     String
-  isOnline  Boolean  @default(false)
+  isOnline  Boolean  @default(false) @map("is_online")
   expires   DateTime?
   data      Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  shopId Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  shopId Int @map("shop_id")
   shopRelation Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  
+
   @@map("sessions")
 }
 
 model Conversation {
   id                String    @id @default(cuid())
-  shopId            Int
-  customerEmail     String?
-  customerName      String?
-  customerId        String?
+  shopId            Int       @map("shop_id")
+  customerEmail     String?   @map("customer_email")
+  customerName      String?   @map("customer_name")
+  customerId        String?   @map("customer_id")
   status            String    @default("active")
   escalated         Boolean   @default(false)
-  escalationReason  String?
+  escalationReason  String?   @map("escalation_reason")
   metadata          Json      @default("{}")
-  messageCount      Int       @default(0)
-  lastMessageAt     DateTime  @default(now())
-  resolvedAt        DateTime?
-  sessionId         String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
+  messageCount      Int       @default(0) @map("message_count")
+  lastMessageAt     DateTime  @default(now()) @map("last_message_at")
+  resolvedAt        DateTime? @map("resolved_at")
+  sessionId         String?   @map("session_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
   shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   messages  Message[]
-  
+
   @@map("conversations")
 }
 
 model Message {
   id              Int      @id @default(autoincrement())
-  conversationId  String
+  conversationId  String   @map("conversation_id")
   role            String
   content         String
   metadata        Json     @default("{}")
   tokens          Int?
-  responseTime    Int?
-  aiModel         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  responseTime    Int?     @map("response_time")
+  aiModel         String?  @map("ai_model")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
+
   @@map("messages")
 }
 
 model BillingSubscription {
   id                String   @id @default(cuid())
-  shopId            Int      @unique
-  subscriptionId    String   @unique
-  planName          String
+  shopId            Int      @unique @map("shop_id")
+  subscriptionId    String   @unique @map("subscription_id")
+  planName          String   @map("plan_name")
   price             Float
   currency          String   @default("USD")
   status            String
-  trialDays         Int      @default(7)
-  trialEndsAt       DateTime?
-  currentPeriodEnd  DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  trialDays         Int      @default(7) @map("trial_days")
+  trialEndsAt       DateTime? @map("trial_ends_at")
+  currentPeriodEnd  DateTime? @map("current_period_end")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  
+
   @@map("billing_subscriptions")
 }

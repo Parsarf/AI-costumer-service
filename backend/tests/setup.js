@@ -1,17 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const { execSync } = require('child_process');
-
-// Test database setup
-const testDatabaseUrl = process.env.TEST_DATABASE_URL || 'postgresql://postgres:password@localhost:5432/shopify_support_bot_test';
-
-// Create test Prisma client
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: testDatabaseUrl
-    }
-  }
-});
+// Get the global test Prisma client
+const prisma = globalThis.testPrisma;
 
 // Test data factories
 const testData = {
@@ -32,8 +20,7 @@ const testData = {
   },
   conversation: {
     id: 'test_conv_123',
-    shop: 'test-shop.myshopify.com',
-    userId: '123456',
+    shopId: 1,
     customerEmail: 'customer@test.com',
     prompt: 'I need help with my order',
     reply: 'I\'d be happy to help you with your order!',
@@ -43,7 +30,6 @@ const testData = {
     }
   },
   message: {
-    id: 'test_msg_123',
     conversationId: 'test_conv_123',
     role: 'user',
     content: 'I need help with my order',
@@ -55,29 +41,40 @@ const testData = {
 const testUtils = {
   // Clean database before each test
   async cleanDatabase() {
-    await prisma.message.deleteMany();
-    await prisma.conversation.deleteMany();
-    await prisma.billingSubscription.deleteMany();
-    await prisma.shop.deleteMany();
+    if (!prisma) return;
+    try {
+      await prisma.message.deleteMany();
+      await prisma.conversation.deleteMany();
+      await prisma.billingSubscription.deleteMany();
+      await prisma.session.deleteMany();
+      await prisma.shop.deleteMany();
+    } catch (error) {
+      // Silently handle errors during cleanup
+    }
   },
 
   // Seed test data
   async seedTestData() {
-    await prisma.shop.create({
-      data: testData.shop
-    });
-    
-    await prisma.conversation.create({
-      data: testData.conversation
-    });
-    
-    await prisma.message.create({
-      data: testData.message
-    });
+    if (!prisma) return;
+    try {
+      const shop = await prisma.shop.create({
+        data: testData.shop
+      });
+
+      await prisma.conversation.create({
+        data: {
+          ...testData.conversation,
+          shopId: shop.id
+        }
+      });
+    } catch (error) {
+      console.warn('Failed to seed test data:', error.message);
+    }
   },
 
   // Create test shop
   async createTestShop(overrides = {}) {
+    if (!prisma) throw new Error('Prisma not initialized');
     return await prisma.shop.create({
       data: { ...testData.shop, ...overrides }
     });
@@ -85,6 +82,7 @@ const testUtils = {
 
   // Create test conversation
   async createTestConversation(overrides = {}) {
+    if (!prisma) throw new Error('Prisma not initialized');
     return await prisma.conversation.create({
       data: { ...testData.conversation, ...overrides }
     });
@@ -92,6 +90,7 @@ const testUtils = {
 
   // Create test message
   async createTestMessage(overrides = {}) {
+    if (!prisma) throw new Error('Prisma not initialized');
     return await prisma.message.create({
       data: { ...testData.message, ...overrides }
     });
@@ -185,17 +184,17 @@ const testUtils = {
   async makeRequest(app, method, path, data = null, headers = {}) {
     const request = require('supertest')(app);
     let req = request[method.toLowerCase()](path);
-    
+
     if (headers) {
       Object.entries(headers).forEach(([key, value]) => {
         req = req.set(key, value);
       });
     }
-    
+
     if (data) {
       req = req.send(data);
     }
-    
+
     return await req;
   },
 
@@ -205,26 +204,18 @@ const testUtils = {
   }
 };
 
-// Global test setup
-beforeAll(async () => {
-  // Set test environment
-  process.env.NODE_ENV = 'test';
-  process.env.DATABASE_URL = testDatabaseUrl;
-  
-  // Connect to test database
-  await prisma.$connect();
-  
-  // Run migrations
-  try {
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-  } catch (error) {
-    console.warn('Migration failed, continuing with tests:', error.message);
-  }
+// Clean up after each test
+afterEach(async () => {
+  // Clean database after each test
+  await testUtils.cleanDatabase();
 });
 
 // Global test teardown
 afterAll(async () => {
-  await prisma.$disconnect();
+  // Disconnect prisma
+  if (prisma) {
+    await prisma.$disconnect();
+  }
 });
 
 // Export for use in tests

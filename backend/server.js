@@ -427,6 +427,9 @@ function setupGracefulShutdown(server) {
 
 // Remove duplicate signal handlers (handled in setupGracefulShutdown)
 
-startServer();
+// Only start server if running directly (not imported as a module)
+if (require.main === module) {
+  startServer();
+}
 
-module.exports = app;
+module.exports = { app, startServer };

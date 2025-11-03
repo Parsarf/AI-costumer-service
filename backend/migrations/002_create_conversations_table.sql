@@ -34,6 +34,5 @@ ALTER TABLE conversations ADD CONSTRAINT check_customer_email
   CHECK (customer_email IS NULL OR customer_email ~ '^[^@]+@[^@]+\.[^@]+$');
 
 -- Update updated_at trigger for conversations
-CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON conversations
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
 

@@ -1,8 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx prisma validate:*)",
-      "Bash(node -e:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix migration SQL syntax and schema alignment issues\n\nCRITICAL FIXES:\n- Fix trigger function SQL syntax to work with migration runner (remove internal semicolons)\n- Update migration 001 to match cleaned Prisma schema (remove duplicate active/plan fields)\n- Add ALTER statements to ensure all columns exist for production database\n- Remove semicolons from trigger CREATE statements in migrations 002 and 003\n- Add DROP statements to remove old duplicate columns (active, plan)\n\nThis fixes:\n- Migration error: \"syntax error at or near RETURN\"\n- Prisma error: \"column access_token does not exist\"\n- Schema alignment between database and Prisma model\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

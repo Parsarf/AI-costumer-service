@@ -22,8 +22,7 @@ ALTER TABLE messages ADD CONSTRAINT check_message_role
   CHECK (role IN ('user', 'assistant', 'system'));
 
 -- Update updated_at trigger for messages
-CREATE TRIGGER update_messages_updated_at BEFORE UPDATE ON messages
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_messages_updated_at BEFORE UPDATE ON messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
 
 -- Add composite index for efficient conversation queries
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_created 

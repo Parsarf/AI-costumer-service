@@ -35,8 +35,8 @@ async function sendEmail({ to, subject, html, text }) {
  * Send escalation notification
  */
 async function sendEscalationEmail(store, conversation, transcript) {
-  const supportEmail = store.settings.escalationEmail || store.settings.supportEmail;
-  
+  const supportEmail = store.settings?.escalationEmail || store.settings?.supportEmail;
+
   if (!supportEmail) {
     logger.warn('No support email configured', { shop: store.shop });
     return false;
@@ -83,8 +83,8 @@ async function sendEscalationEmail(store, conversation, transcript) {
  * Send welcome email to new store
  */
 async function sendWelcomeEmail(store) {
-  const email = store.settings.supportEmail;
-  
+  const email = store.settings?.supportEmail;
+
   if (!email) {
     return false;
   }

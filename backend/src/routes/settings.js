@@ -22,10 +22,8 @@ router.get('/', async (req, res) => {
       where: { shop },
       select: {
         shop: true,
-        plan: true,
         subscriptionTier: true,
         settings: true,
-        active: true,
         isActive: true,
         createdAt: true
       }
@@ -38,9 +36,7 @@ router.get('/', async (req, res) => {
         data: {
           shop,
           accessToken: 'temp_token', // Will be updated during OAuth
-          active: true,
           isActive: true,
-          plan: 'starter',
           subscriptionTier: 'starter',
           settings: {
             welcomeMessage: 'Hi! How can I help you today?',
@@ -52,10 +48,8 @@ router.get('/', async (req, res) => {
         },
         select: {
           shop: true,
-          plan: true,
           subscriptionTier: true,
           settings: true,
-          active: true,
           isActive: true,
           createdAt: true
         }
@@ -107,9 +101,7 @@ router.put('/', validateInput, async (req, res) => {
         data: {
           shop,
           accessToken: 'temp_token', // Will be updated during OAuth
-          active: true,
           isActive: true,
-          plan: 'starter',
           subscriptionTier: 'starter',
           settings: settings
         }

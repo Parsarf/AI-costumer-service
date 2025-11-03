@@ -6,20 +6,23 @@ const createSubscription = async (session) => {
   try {
     const client = createGraphQLClient(session);
     
+    const billingPrice = parseFloat(process.env.BILLING_PRICE) || 19.99;
+    const trialDays = parseInt(process.env.BILLING_TRIAL_DAYS, 10) || 7;
+
     const variables = {
-      name: `AI Support Bot - $${process.env.BILLING_PRICE}/month`,
+      name: `AI Support Bot - $${billingPrice}/month`,
       lineItems: [{
         plan: {
           appRecurringPricingDetails: {
             price: {
-              amount: parseFloat(process.env.BILLING_PRICE),
+              amount: billingPrice,
               currencyCode: 'USD'
             }
           }
         }
       }],
       returnUrl: `${process.env.APP_URL}/app?shop=${session.shop}`,
-      trialDays: parseInt(process.env.BILLING_TRIAL_DAYS)
+      trialDays: trialDays
     };
 
     const response = await client.query({
@@ -37,24 +40,36 @@ const createSubscription = async (session) => {
 
     const subscription = appSubscriptionCreate.appSubscription;
     
+    // Find shop by domain to get numeric ID
+    const shop = await prisma.shop.findUnique({
+      where: { shop: session.shop }
+    });
+
+    if (!shop) {
+      throw new Error('Shop not found');
+    }
+
     // Save subscription to database
+    const dbBillingPrice = parseFloat(process.env.BILLING_PRICE) || 19.99;
+    const dbTrialDays = parseInt(process.env.BILLING_TRIAL_DAYS, 10) || 7;
+
     await prisma.billingSubscription.upsert({
-      where: { shopId: session.shop },
+      where: { shopId: shop.id },
       update: {
         subscriptionId: subscription.id,
-        planName: `AI Support Bot - $${process.env.BILLING_PRICE}/month`,
-        price: parseFloat(process.env.BILLING_PRICE),
+        planName: `AI Support Bot - $${dbBillingPrice}/month`,
+        price: dbBillingPrice,
         status: subscription.status,
-        trialEndsAt: new Date(Date.now() + parseInt(process.env.BILLING_TRIAL_DAYS) * 24 * 60 * 60 * 1000),
+        trialEndsAt: new Date(Date.now() + dbTrialDays * 24 * 60 * 60 * 1000),
         currentPeriodEnd: new Date(subscription.currentPeriodEnd)
       },
       create: {
-        shopId: session.shop,
+        shopId: shop.id,
         subscriptionId: subscription.id,
-        planName: `AI Support Bot - $${process.env.BILLING_PRICE}/month`,
-        price: parseFloat(process.env.BILLING_PRICE),
+        planName: `AI Support Bot - $${dbBillingPrice}/month`,
+        price: dbBillingPrice,
         status: subscription.status,
-        trialEndsAt: new Date(Date.now() + parseInt(process.env.BILLING_TRIAL_DAYS) * 24 * 60 * 60 * 1000),
+        trialEndsAt: new Date(Date.now() + dbTrialDays * 24 * 60 * 60 * 1000),
         currentPeriodEnd: new Date(subscription.currentPeriodEnd)
       }
     });
@@ -89,15 +104,24 @@ const getActiveSubscription = async (session) => {
   }
 };
 
-const checkBillingStatus = async (shop) => {
+const checkBillingStatus = async (shopDomain) => {
   try {
     // Check if free plan is enabled
     if (process.env.FREE_PLAN === 'true') {
       return { hasAccess: true, plan: 'free' };
     }
 
+    // Find shop by domain to get numeric ID
+    const shop = await prisma.shop.findUnique({
+      where: { shop: shopDomain }
+    });
+
+    if (!shop) {
+      return { hasAccess: false, plan: 'none', error: 'Shop not found' };
+    }
+
     const subscription = await prisma.billingSubscription.findUnique({
-      where: { shopId: shop }
+      where: { shopId: shop.id }
     });
 
     if (!subscription) {
@@ -105,7 +129,7 @@ const checkBillingStatus = async (shop) => {
     }
 
     const now = new Date();
-    const isActive = subscription.status === 'ACTIVE' || 
+    const isActive = subscription.status === 'ACTIVE' ||
                     (subscription.status === 'PENDING' && subscription.trialEndsAt > now);
 
     return {

@@ -5,6 +5,7 @@ const { fetchOrderInfo, fetchProductInfo } = require('../services/shopifyService
 const { checkEscalation, analyzeEscalationNeed, notifyEscalation, getEscalationMessage } = require('../services/escalationService');
 const { extractOrderNumber, extractProductQuery, detectIntent } = require('../utils/orderParser');
 const { buildGreetingMessage } = require('../utils/promptBuilder');
+const { isValidShopDomain } = require('../utils/shopValidation');
 const logger = require('../utils/logger');
 
 /**
@@ -22,11 +23,16 @@ async function handleChatMessage(req, res) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    if (!isValidShopDomain(shop)) {
+      logger.warn('Invalid shop domain format', { shop });
+      return res.status(400).json({ error: 'Invalid shop domain format' });
+    }
+
     logger.info('Processing chat message', { shop, conversationId, messageLength: message.length });
 
     // Find store
-    const store = await prisma.shop.findUnique({ 
-      where: { shop, isActive: true } 
+    const store = await prisma.shop.findFirst({
+      where: { shop, isActive: true }
     });
     
     if (!store) {
@@ -116,9 +122,17 @@ async function handleChatMessage(req, res) {
     if (needsEscalation || escalationAnalysis.shouldEscalate) {
       escalated = true;
       const reason = escalationAnalysis.reasons.join('; ') || 'User request or sensitive topic';
-      
-      await conversation.escalate(reason);
-      
+
+      // Update conversation to escalated status
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          escalated: true,
+          escalationReason: reason,
+          status: 'escalated'
+        }
+      });
+
       // Notify support team (async)
       notifyEscalation(conversation, store, reason).catch(err =>
         logger.error('Failed to send escalation notification:', err)
@@ -126,10 +140,10 @@ async function handleChatMessage(req, res) {
 
       // Add escalation message
       finalResponse += '\n\n' + getEscalationMessage(store.storeName, conversation.customerEmail);
-      
-      logger.info('Conversation escalated', { 
-        conversationId: conversation.id, 
-        reason 
+
+      logger.info('Conversation escalated', {
+        conversationId: conversation.id,
+        reason
       });
     }
 
@@ -198,6 +212,11 @@ async function getConversation(req, res) {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
+    if (!isValidShopDomain(shop)) {
+      logger.warn('Invalid shop domain format', { shop });
+      return res.status(400).json({ error: 'Invalid shop domain format' });
+    }
+
     const store = await prisma.shop.findUnique({ where: { shop } });
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
@@ -237,8 +256,13 @@ async function getWelcomeMessage(req, res) {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
-    const store = await prisma.shop.findUnique({ 
-      where: { shop, isActive: true } 
+    if (!isValidShopDomain(shop)) {
+      logger.warn('Invalid shop domain format', { shop });
+      return res.status(400).json({ error: 'Invalid shop domain format' });
+    }
+
+    const store = await prisma.shop.findFirst({
+      where: { shop, isActive: true }
     });
     
     if (!store) {
@@ -253,9 +277,9 @@ async function getWelcomeMessage(req, res) {
       customerName
     );
 
-    res.json({ 
+    res.json({
       message: welcomeMsg,
-      theme: store.settings.theme || {}
+      theme: store.settings?.theme || {}
     });
 
   } catch (error) {

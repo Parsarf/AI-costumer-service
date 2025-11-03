@@ -56,12 +56,35 @@ async function getConversation(conversationId, includeMessages = true) {
 
 /**
  * Get or create conversation
+ * Uses a unique session ID to prevent duplicate conversation creation
  */
 async function getOrCreateConversation(conversationId, shopId, customerData) {
   if (conversationId) {
     const conversation = await getConversation(conversationId);
     if (conversation && conversation.shopId === shopId) {
       return conversation;
+    }
+  }
+
+  // If no conversationId provided and we have a sessionId, try to find existing conversation
+  if (customerData.sessionId) {
+    const existingConversation = await prisma.conversation.findFirst({
+      where: {
+        shopId: shopId,
+        sessionId: customerData.sessionId,
+        status: 'active'
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    if (existingConversation) {
+      logger.info('Found existing conversation by sessionId', {
+        conversationId: existingConversation.id,
+        sessionId: customerData.sessionId
+      });
+      return existingConversation;
     }
   }
 

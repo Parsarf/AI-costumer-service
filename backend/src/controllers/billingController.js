@@ -41,7 +41,7 @@ async function createSubscription(shop, accessToken, plan = 'starter') {
         }
       }],
       returnUrl: `${process.env.APP_URL}/billing/callback?shop=${shop}`,
-      trialDays: parseInt(process.env.BILLING_TRIAL_DAYS) || 7,
+      trialDays: parseInt(process.env.BILLING_TRIAL_DAYS, 10) || 7,
       test: isTestMode
     };
 
@@ -205,26 +205,40 @@ async function cancelSubscription(shop, accessToken, subscriptionId) {
  * @param {string} shop - Shop domain
  * @returns {Object} - Billing status information
  */
-async function getBillingStatus(shop) {
+async function getBillingStatus(shopDomain) {
   try {
     // Check if free plan is enabled
     if (process.env.FREE_PLAN === 'true') {
-      return { 
-        hasAccess: true, 
+      return {
+        hasAccess: true,
         plan: 'free',
         status: 'active',
         message: 'Free plan enabled'
       };
     }
 
+    // Find shop by domain to get numeric ID
+    const shop = await prisma.shop.findUnique({
+      where: { shop: shopDomain }
+    });
+
+    if (!shop) {
+      return {
+        hasAccess: false,
+        plan: 'none',
+        status: 'inactive',
+        message: 'Shop not found'
+      };
+    }
+
     // Get subscription from database
     const subscription = await prisma.billingSubscription.findUnique({
-      where: { shopId: shop }
+      where: { shopId: shop.id }
     });
 
     if (!subscription) {
-      return { 
-        hasAccess: false, 
+      return {
+        hasAccess: false,
         plan: 'none',
         status: 'inactive',
         message: 'No subscription found'
@@ -232,9 +246,9 @@ async function getBillingStatus(shop) {
     }
 
     const now = new Date();
-    const isActive = subscription.status === 'ACTIVE' || 
-                    (subscription.status === 'PENDING' && 
-                     subscription.trialEndsAt && 
+    const isActive = subscription.status === 'ACTIVE' ||
+                    (subscription.status === 'PENDING' &&
+                     subscription.trialEndsAt &&
                      subscription.trialEndsAt > now);
 
     return {
@@ -250,8 +264,8 @@ async function getBillingStatus(shop) {
 
   } catch (error) {
     logger.error('Error getting billing status:', error);
-    return { 
-      hasAccess: false, 
+    return {
+      hasAccess: false,
       plan: 'error',
       status: 'error',
       message: 'Error checking billing status'
@@ -265,10 +279,19 @@ async function getBillingStatus(shop) {
  * @param {Object} subscriptionData - Subscription data from Shopify
  * @returns {Object} - Updated subscription
  */
-async function updateBillingSubscription(shop, subscriptionData) {
+async function updateBillingSubscription(shopDomain, subscriptionData) {
   try {
+    // Find shop by domain to get numeric ID
+    const shop = await prisma.shop.findUnique({
+      where: { shop: shopDomain }
+    });
+
+    if (!shop) {
+      throw new Error('Shop not found');
+    }
+
     const subscription = await prisma.billingSubscription.upsert({
-      where: { shopId: shop },
+      where: { shopId: shop.id },
       update: {
         subscriptionId: subscriptionData.id,
         planName: subscriptionData.name,
@@ -279,7 +302,7 @@ async function updateBillingSubscription(shop, subscriptionData) {
         updatedAt: new Date()
       },
       create: {
-        shopId: shop,
+        shopId: shop.id,
         subscriptionId: subscriptionData.id,
         planName: subscriptionData.name,
         price: subscriptionData.price,

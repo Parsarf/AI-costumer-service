@@ -25,7 +25,7 @@ router.post('/create', async (req, res) => {
     }
 
     // Get store access token
-    const store = await prisma.shop.findUnique({
+    const store = await prisma.shop.findFirst({
       where: { shop, isActive: true }
     });
 
@@ -70,7 +70,7 @@ router.get('/callback', async (req, res) => {
     }
 
     // Get store access token
-    const store = await prisma.shop.findUnique({
+    const store = await prisma.shop.findFirst({
       where: { shop, isActive: true }
     });
 
@@ -131,7 +131,7 @@ router.post('/cancel', async (req, res) => {
     }
 
     // Get store access token
-    const store = await prisma.shop.findUnique({
+    const store = await prisma.shop.findFirst({
       where: { shop, isActive: true }
     });
 
@@ -141,7 +141,7 @@ router.post('/cancel', async (req, res) => {
 
     // Get subscription ID
     const billingSubscription = await prisma.billingSubscription.findUnique({
-      where: { shopId: shop }
+      where: { shopId: store.id }
     });
 
     if (!billingSubscription) {

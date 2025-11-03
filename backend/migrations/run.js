@@ -82,14 +82,23 @@ async function runMigrations() {
     // Generate Prisma client
     logger.info('Generating Prisma client...');
     const { execSync } = require('child_process');
-    execSync('npx prisma generate', { stdio: 'inherit' });
-    logger.info('Prisma client generated successfully');
+
+    try {
+      execSync('npx prisma generate', { stdio: 'inherit' });
+      logger.info('Prisma client generated successfully');
+    } catch (generateError) {
+      logger.error('Failed to generate Prisma client:', generateError);
+      // Don't throw - allow migrations to complete even if generate fails
+      // The client might already be generated from a previous run
+    }
 
   } catch (error) {
     logger.error('Migration error:', error);
     throw error;
   } finally {
-    await prisma.$disconnect();
+    await prisma.$disconnect().catch(err => {
+      logger.error('Error disconnecting from database:', err);
+    });
   }
 }
 

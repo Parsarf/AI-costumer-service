@@ -142,8 +142,8 @@ function similarity(str1, str2) {
  */
 async function notifyEscalation(conversation, store, reason) {
   try {
-    const supportEmail = store.settings.escalationEmail || store.settings.supportEmail;
-    
+    const supportEmail = store.settings?.escalationEmail || store.settings?.supportEmail;
+
     if (!supportEmail) {
       logger.warn('No escalation email configured for store', { shop: store.shop });
       return false;

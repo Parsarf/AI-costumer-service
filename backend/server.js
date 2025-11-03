@@ -58,19 +58,20 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
     // Allow Shopify admin and storefronts
-    if (origin.includes('.myshopify.com') || 
+    if (origin.includes('.myshopify.com') ||
         origin.includes('admin.shopify.com') ||
         origin.includes(process.env.APP_URL)) {
       return callback(null, true);
     }
-    
+
     // In production, reject unknown origins
     if (process.env.NODE_ENV === 'production') {
+      logger.warn('CORS request rejected', { origin, env: process.env.NODE_ENV });
       return callback(new Error('Not allowed by CORS'), false);
     }
-    
+
     // In development, allow all
     callback(null, true);
   },
@@ -163,7 +164,7 @@ app.get('/ready', async (req, res) => {
   try {
     const checks = {
       database: false,
-      claude: false,
+      openai: false,
       timestamp: new Date().toISOString()
     };
 
@@ -175,32 +176,27 @@ app.get('/ready', async (req, res) => {
       logger.error('Database health check failed:', error);
     }
 
-    // Check Claude API connectivity
+    // Check OpenAI API connectivity
     try {
-      const { Anthropic } = require('@anthropic-ai/sdk');
-      const anthropic = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY
-      });
-      
-      // Simple ping test (this will fail if API key is invalid)
-      if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.startsWith('sk-')) {
-        checks.claude = true;
+      // Simple check - verify API key is set
+      if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
+        checks.openai = true;
       }
     } catch (error) {
-      logger.error('Claude API health check failed:', error);
+      logger.error('OpenAI API health check failed:', error);
     }
 
-    const allHealthy = checks.database && checks.claude;
-    
+    const allHealthy = checks.database && checks.openai;
+
     if (allHealthy) {
-      res.json({ 
-        status: 'ready', 
+      res.json({
+        status: 'ready',
         checks,
         message: 'All dependencies are healthy'
       });
     } else {
-      res.status(503).json({ 
-        status: 'not ready', 
+      res.status(503).json({
+        status: 'not ready',
         checks,
         message: 'One or more dependencies are unhealthy'
       });
